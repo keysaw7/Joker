@@ -27,7 +27,7 @@ export const schemaNiveauGuidage = z.enum(["fort", "modere", "autonome"]);
 export const schemaBlocContenu = z.object({
   format: schemaFormatContenu,
   contenu: z.string(),
-  legende: z.string().optional(),
+  legende: z.string().nullable(),
 });
 
 export const schemaQuestionDiagnostic = z.object({
@@ -81,15 +81,15 @@ export const schemaExempleExpertSansNotionId = z.object({
 export const schemaExerciceSansIds = z.object({
   enonce: z.string(),
   guidage: schemaNiveauGuidage,
-  cibleLacune: z.string().optional(),
+  cibleLacune: z.string().nullable(),
 });
 
 export const schemaAnalyseReponse = z.object({
   correcte: z.boolean(),
   pourquoi: z.string(),
-  connaissanceManquante: z.string().optional(),
-  confusion: z.string().optional(),
-  erreurCognitive: z.string().optional(),
+  connaissanceManquante: z.string().nullable(),
+  confusion: z.string().nullable(),
+  erreurCognitive: z.string().nullable(),
 });
 
 export const schemaCorrectionSansIds = z.object({

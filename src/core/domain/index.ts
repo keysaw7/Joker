@@ -31,3 +31,4 @@ export type {
   Recompense,
 } from "./cycle";
 export type { EtatParcours, PhaseParcours } from "./parcours";
+export type { ResumeSession, SessionPersistee, StatutSession } from "./session";

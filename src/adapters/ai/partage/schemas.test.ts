@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { normaliserAnalyse, normaliserBloc } from "./normaliser";
 import {
   schemaAnalyseReponse,
+  schemaBlocContenu,
+  schemaCoursSansNotionId,
   schemaProfilSansIds,
   schemaQuestionDiagnostic,
   schemaRoadmapSansIds,
@@ -51,7 +54,40 @@ describe("schemas IA", () => {
       correcte: false,
       pourquoi: "Confusion entre numérateur et dénominateur",
       confusion: "inversion des termes",
+      connaissanceManquante: null,
+      erreurCognitive: null,
     });
     expect(result.success).toBe(true);
+  });
+
+  it("accepte un bloc de contenu avec legende nullable (schéma OpenAI)", () => {
+    const result = schemaBlocContenu.safeParse({
+      format: "texte",
+      contenu: "Introduction",
+      legende: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepte un cours avec blocs sans légende", () => {
+    const result = schemaCoursSansNotionId.safeParse({
+      titre: "Les bases",
+      blocs: [{ format: "texte", contenu: "Contenu", legende: null }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("normalise null vers undefined pour le domaine", () => {
+    const bloc = normaliserBloc({ format: "texte", contenu: "x", legende: null });
+    expect(bloc.legende).toBeUndefined();
+
+    const analyse = normaliserAnalyse({
+      correcte: true,
+      pourquoi: "ok",
+      connaissanceManquante: null,
+      confusion: null,
+      erreurCognitive: null,
+    });
+    expect(analyse.connaissanceManquante).toBeUndefined();
   });
 });

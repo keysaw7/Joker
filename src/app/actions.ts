@@ -3,9 +3,19 @@
 import type { SelectionModele } from "@/adapters/ai/fournisseurs";
 import { normaliserSelection } from "@/adapters/ai/fournisseurs";
 import { avecTrace } from "@/adapters/logging/contexteTrace";
-import type { ContexteApprentissage, EtatCycle, EtatParcours } from "@/core/domain";
+import type {
+  ContexteApprentissage,
+  EtatCycle,
+  EtatParcours,
+  ResumeSession,
+  SessionPersistee,
+} from "@/core/domain";
 import { trouverDomaine } from "./_data/domaines";
-import { creerCycle, creerParcours } from "./_serveur/moteur";
+import { creerCycle, creerParcours, memoire } from "./_serveur/moteur";
+import {
+  enregistrerSnapshotCycle,
+  enregistrerSnapshotParcours,
+} from "./_serveur/snapshots";
 
 function libelleModele(selection: SelectionModele): string {
   return `${selection.fournisseur}/${selection.modele}`;
@@ -31,7 +41,12 @@ export async function demarrerParcours(
         creeLe: new Date().toISOString(),
       };
 
-      return creerParcours(normaliserSelection(selection)).demarrer(domaine, objectif);
+      const etat = await creerParcours(normaliserSelection(selection)).demarrer(
+        domaine,
+        objectif,
+      );
+      await enregistrerSnapshotParcours(etat);
+      return etat;
     },
     {
       domaine: domaineId,
@@ -53,10 +68,12 @@ export async function repondreDiagnostic(
         throw new Error("Aucune question en cours");
       }
 
-      return creerParcours(normaliserSelection(selection)).repondre(etat, {
+      const nouvelEtat = await creerParcours(normaliserSelection(selection)).repondre(etat, {
         questionId: etat.questionCourante.id,
         reponse: texte.trim(),
       });
+      await enregistrerSnapshotParcours(nouvelEtat);
+      return nouvelEtat;
     },
     {
       objectifId: etat.contexte.objectif.id,
@@ -73,7 +90,11 @@ export async function demarrerCycle(
 ): Promise<EtatCycle> {
   return avecTrace(
     "demarrerCycle",
-    () => creerCycle(normaliserSelection(selection)).demarrer(contexte),
+    async () => {
+      const etat = await creerCycle(normaliserSelection(selection)).demarrer(contexte);
+      await enregistrerSnapshotCycle(etat);
+      return etat;
+    },
     {
       objectifId: contexte.objectif.id,
       notions: contexte.roadmap?.notions.length ?? 0,
@@ -88,7 +109,11 @@ export async function avancerCycle(
 ): Promise<EtatCycle> {
   return avecTrace(
     "avancerCycle",
-    () => creerCycle(normaliserSelection(selection)).avancer(etat),
+    async () => {
+      const nouvelEtat = await creerCycle(normaliserSelection(selection)).avancer(etat);
+      await enregistrerSnapshotCycle(nouvelEtat);
+      return nouvelEtat;
+    },
     {
       objectifId: etat.contexte.objectif.id,
       etape: etat.etape,
@@ -110,10 +135,15 @@ export async function repondreExercice(
         throw new Error("Aucun exercice en cours");
       }
 
-      return creerCycle(normaliserSelection(selection)).repondreExercice(etat, {
-        exerciceId: etat.etatExercices.exerciceCourant.id,
-        contenu: texte.trim(),
-      });
+      const nouvelEtat = await creerCycle(normaliserSelection(selection)).repondreExercice(
+        etat,
+        {
+          exerciceId: etat.etatExercices.exerciceCourant.id,
+          contenu: texte.trim(),
+        },
+      );
+      await enregistrerSnapshotCycle(nouvelEtat);
+      return nouvelEtat;
     },
     {
       objectifId: etat.contexte.objectif.id,
@@ -130,7 +160,13 @@ export async function notionSuivante(
 ): Promise<EtatCycle> {
   return avecTrace(
     "notionSuivante",
-    () => creerCycle(normaliserSelection(selection)).terminerEtPasserSuivant(etat),
+    async () => {
+      const nouvelEtat = await creerCycle(
+        normaliserSelection(selection),
+      ).terminerEtPasserSuivant(etat);
+      await enregistrerSnapshotCycle(nouvelEtat);
+      return nouvelEtat;
+    },
     {
       objectifId: etat.contexte.objectif.id,
       notionId: etat.contexte.notionCouranteId ?? undefined,
@@ -138,4 +174,14 @@ export async function notionSuivante(
       modele: libelleModele(normaliserSelection(selection)),
     },
   );
+}
+
+export async function listerSessions(domaineId: string): Promise<readonly ResumeSession[]> {
+  return memoire().listerSessions(domaineId);
+}
+
+export async function reprendreSession(
+  objectifId: string,
+): Promise<SessionPersistee | null> {
+  return memoire().chargerSession(objectifId);
 }

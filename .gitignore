@@ -8,3 +8,4 @@ next-env.d.ts
 !.env.local.example
 .DS_Store
 /coverage
+/.data

@@ -30,6 +30,11 @@ import { traceIdCourant } from "@/adapters/logging/contexteTrace";
 import { journalIA } from "@/adapters/logging/journal";
 import { construireRoadmapDepuisGeneration } from "./construireRoadmap";
 import {
+  normaliserAnalyse,
+  normaliserBloc,
+  normaliserExercice,
+} from "./normaliser";
+import {
   promptAdaptation,
   promptAnalyserReponse,
   promptConstruireProfil,
@@ -79,6 +84,12 @@ async function genererStructure<T>(
       system: promptSysteme(),
       prompt,
       output: Output.object({ schema }),
+      providerOptions: {
+        openai: {
+          reasoningEffort: "minimal",
+          textVerbosity: "low",
+        },
+      },
     });
 
     const dureeMs = Math.round(performance.now() - debut);
@@ -189,7 +200,11 @@ export function creerCapacitesIA(modele: LanguageModel): {
         promptGenererCours(contexte, notion),
         "cours",
       );
-      return { notionId: notion.id, ...genere };
+      return {
+        notionId: notion.id,
+        titre: genere.titre,
+        blocs: genere.blocs.map(normaliserBloc),
+      };
     },
 
     async genererExempleExpert(contexte, notion): Promise<ExempleExpert> {
@@ -199,7 +214,11 @@ export function creerCapacitesIA(modele: LanguageModel): {
         promptGenererExempleExpert(contexte, notion),
         "exempleExpert",
       );
-      return { notionId: notion.id, ...genere };
+      return {
+        notionId: notion.id,
+        contexte: genere.contexte,
+        demonstration: genere.demonstration.map(normaliserBloc),
+      };
     },
   };
 
@@ -211,21 +230,22 @@ export function creerCapacitesIA(modele: LanguageModel): {
         promptGenererExercice(contexte, notion, guidage),
         "exercice",
       );
-      return {
+      return normaliserExercice(genere, {
         id: crypto.randomUUID(),
         notionId: notion.id,
-        ...genere,
-      };
+      });
     },
   };
 
   const analyseurErreurs: AnalyseurErreurs = {
     async analyser(contexte, exercice, reponse): Promise<AnalyseReponse> {
-      return genererStructure(
-        modele,
-        schemaAnalyseReponse,
-        promptAnalyserReponse(contexte, exercice, reponse),
-        "analyseReponse",
+      return normaliserAnalyse(
+        await genererStructure(
+          modele,
+          schemaAnalyseReponse,
+          promptAnalyserReponse(contexte, exercice, reponse),
+          "analyseReponse",
+        ),
       );
     },
   };

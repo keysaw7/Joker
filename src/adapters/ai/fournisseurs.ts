@@ -240,8 +240,8 @@ export const FOURNISSEURS: readonly FournisseurIA[] = [
 ] as const;
 
 export const SELECTION_DEFAUT: SelectionModele = {
-  fournisseur: "mock",
-  modele: "mock",
+  fournisseur: "openai",
+  modele: "gpt-5-nano",
 };
 
 export function trouverFournisseur(id: IdFournisseur): FournisseurIA | undefined {
