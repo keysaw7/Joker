@@ -16,9 +16,13 @@ import type {
 } from "@/core/ports";
 import {
   creerRecompense,
+  enrichirProfil,
   extraireLacune,
+  GUIDAGE_INITIAL,
+  marquerNotionMaitrisee,
   mettreAJourContexte,
   notionEstMaitrisee,
+  prerequisSatisfaits,
   prochainGuidage,
   selectionnerNotionCourante,
 } from "./regles";
@@ -36,13 +40,17 @@ export interface DependancesOrchestrateur {
 export class OrchestrateurCycle {
   constructor(private readonly deps: DependancesOrchestrateur) {}
 
-  async demarrer(
-    contexte: ContexteApprentissage,
-    notionsMaitrisees: readonly string[] = [],
-  ): Promise<EtatCycle> {
+  async demarrer(contexte: ContexteApprentissage): Promise<EtatCycle> {
+    if (!contexte.roadmap) {
+      throw new Error(
+        "L'orchestrateur du Cycle requiert une roadmap dans le contexte",
+      );
+    }
+
+    const notionsMaitrisees = contexte.profil.notionsMaitrisees;
     const notion = this.resoudreNotion(contexte, notionsMaitrisees);
     if (!notion) {
-      return this.etatTermine(contexte, notionsMaitrisees);
+      return this.etatTermine(contexte);
     }
 
     const contexteMisAJour = mettreAJourContexte(contexte, {
@@ -58,7 +66,6 @@ export class OrchestrateurCycle {
       etape: "problematique",
       contenu: { type: "problematique", problematique },
       etatExercices: null,
-      notionsMaitrisees,
       termine: false,
     };
   }
@@ -87,12 +94,11 @@ export class OrchestrateurCycle {
         const exercice = await this.deps.generateurExercices.genererExercice(
           contexte,
           notion,
-          "fort",
+          GUIDAGE_INITIAL,
         );
         const etatExercices: EtatExercices = {
           exerciceCourant: exercice,
-          guidageActuel: "fort",
-          tentatives: 0,
+          guidageActuel: GUIDAGE_INITIAL,
           lacuneActive: null,
         };
         return {
@@ -117,15 +123,25 @@ export class OrchestrateurCycle {
       throw new Error("repondreExercice n'est disponible qu'à l'étape exercices");
     }
 
+    const exercice = etat.etatExercices.exerciceCourant;
+    if (reponse.exerciceId !== exercice.id) {
+      throw new Error("La réponse ne correspond pas à l'exercice courant");
+    }
+
     const notion = this.notionDepuisEtat(etat);
-    const { etatExercices, contexte } = etat;
-    const exercice = etatExercices.exerciceCourant;
+    const { etatExercices } = etat;
+    let { contexte } = etat;
 
     const analyse = await this.deps.analyseurErreurs.analyser(
       contexte,
       exercice,
       reponse,
     );
+
+    contexte = mettreAJourContexte(contexte, {
+      profil: enrichirProfil(contexte.profil, analyse, notion),
+    });
+
     const correction = await this.deps.correcteur.corriger(
       contexte,
       exercice,
@@ -133,6 +149,10 @@ export class OrchestrateurCycle {
     );
 
     if (notionEstMaitrisee(etatExercices, analyse)) {
+      contexte = mettreAJourContexte(contexte, {
+        profil: marquerNotionMaitrisee(contexte.profil, notion),
+      });
+
       const resultat = await this.deps.adaptation.adapter(contexte);
       const contexteAdapte = mettreAJourContexte(contexte, {
         profil: resultat.profil,
@@ -140,15 +160,13 @@ export class OrchestrateurCycle {
       });
       await this.persiste(contexteAdapte);
 
-      const notionsMaitrisees = [...etat.notionsMaitrisees, notion.id];
       const recompense = creerRecompense(notion);
 
       return {
         contexte: contexteAdapte,
         etape: "recompense",
-        contenu: { type: "recompense", recompense },
+        contenu: { type: "recompense", recompense, correctionPrecedente: correction },
         etatExercices: null,
-        notionsMaitrisees,
         termine: false,
       };
     }
@@ -176,13 +194,13 @@ export class OrchestrateurCycle {
 
     const nouvelEtatExercices: EtatExercices = {
       exerciceCourant: prochainExercice,
-      guidageActuel: lacune ? "fort" : guidageSuivant,
-      tentatives: etatExercices.tentatives + 1,
+      guidageActuel: lacune ? GUIDAGE_INITIAL : guidageSuivant,
       lacuneActive,
     };
 
     return {
       ...etat,
+      contexte,
       contenu: {
         type: "exercice",
         exercice: prochainExercice,
@@ -201,22 +219,22 @@ export class OrchestrateurCycle {
 
     const roadmap = etat.contexte.roadmap;
     if (!roadmap) {
-      return this.etatTermine(etat.contexte, etat.notionsMaitrisees);
+      return this.etatTermine(etat.contexte);
     }
 
     const notionSuivante = selectionnerNotionCourante(
       roadmap,
-      etat.notionsMaitrisees,
+      etat.contexte.profil.notionsMaitrisees,
     );
     if (!notionSuivante) {
-      return this.etatTermine(etat.contexte, etat.notionsMaitrisees);
+      return this.etatTermine(etat.contexte);
     }
 
     const contexte = mettreAJourContexte(etat.contexte, {
       notionCouranteId: notionSuivante.id,
     });
 
-    return this.demarrer(contexte, etat.notionsMaitrisees);
+    return this.demarrer(contexte);
   }
 
   private resoudreNotion(
@@ -231,7 +249,11 @@ export class OrchestrateurCycle {
       const notion = contexte.roadmap.notions.find(
         (n) => n.id === contexte.notionCouranteId,
       );
-      if (notion && !notionsMaitrisees.includes(notion.id)) {
+      if (
+        notion &&
+        !notionsMaitrisees.includes(notion.id) &&
+        prerequisSatisfaits(notion, notionsMaitrisees)
+      ) {
         return notion;
       }
     }
@@ -253,10 +275,8 @@ export class OrchestrateurCycle {
     return notion;
   }
 
-  private etatTermine(
-    contexte: ContexteApprentissage,
-    notionsMaitrisees: readonly string[],
-  ): EtatCycle {
+  private etatTermine(contexte: ContexteApprentissage): EtatCycle {
+    const notionsMaitrisees = contexte.profil.notionsMaitrisees;
     const derniereNotion = contexte.roadmap?.notions.find((n) =>
       notionsMaitrisees.includes(n.id),
     );
@@ -272,7 +292,6 @@ export class OrchestrateurCycle {
         },
       },
       etatExercices: null,
-      notionsMaitrisees,
       termine: true,
     };
   }
@@ -282,6 +301,7 @@ export class OrchestrateurCycle {
       return;
     }
     await this.deps.persistance.sauvegarderProfil(contexte.profil);
+    await this.deps.persistance.sauvegarderObjectif(contexte.objectif);
     if (contexte.roadmap) {
       await this.deps.persistance.sauvegarderRoadmap(contexte.roadmap);
     }

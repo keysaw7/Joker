@@ -22,6 +22,7 @@ function creerContexte(
       lacunes: [],
       erreursFrequentes: [],
       preferencesPedagogiques: [],
+      notionsMaitrisees: [],
       miseAJour: "2026-01-01T00:00:00.000Z",
     },
     roadmap: null,

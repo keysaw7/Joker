@@ -30,3 +30,4 @@ export type {
   EtatExercices,
   Recompense,
 } from "./cycle";
+export type { EtatParcours, PhaseParcours } from "./parcours";

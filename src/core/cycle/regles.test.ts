@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { AnalyseReponse, EtatExercices, Roadmap } from "@/core/domain";
+import type { AnalyseReponse, EtatExercices, ProfilApprenant, Roadmap } from "@/core/domain";
 import {
   creerRecompense,
+  enrichirProfil,
   extraireLacune,
+  marquerNotionMaitrisee,
   mettreAJourContexte,
   notionEstMaitrisee,
+  prerequisSatisfaits,
   prochainGuidage,
   selectionnerNotionCourante,
 } from "./regles";
@@ -37,6 +40,20 @@ const roadmap: Roadmap = {
   ],
 };
 
+function profil(overrides: Partial<ProfilApprenant> = {}): ProfilApprenant {
+  return {
+    objectifId: "obj-1",
+    acquis: [],
+    competences: [],
+    lacunes: [],
+    erreursFrequentes: [],
+    preferencesPedagogiques: [],
+    notionsMaitrisees: [],
+    miseAJour: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
 function etatExercices(
   overrides: Partial<EtatExercices> = {},
 ): EtatExercices {
@@ -48,7 +65,6 @@ function etatExercices(
       guidage: "fort",
     },
     guidageActuel: "fort",
-    tentatives: 0,
     lacuneActive: null,
     ...overrides,
   };
@@ -71,6 +87,12 @@ describe("regles — logique pure du cycle", () => {
 
   it("selectionnerNotionCourante retourne null quand tout est maîtrisé", () => {
     expect(selectionnerNotionCourante(roadmap, ["n1", "n2", "n3"])).toBeNull();
+  });
+
+  it("prerequisSatisfaits vérifie les prérequis maîtrisés", () => {
+    expect(prerequisSatisfaits(roadmap.notions[0]!, [])).toBe(true);
+    expect(prerequisSatisfaits(roadmap.notions[1]!, [])).toBe(false);
+    expect(prerequisSatisfaits(roadmap.notions[1]!, ["n1"])).toBe(true);
   });
 
   it("notionEstMaitrisee exige guidage autonome et réponse correcte", () => {
@@ -136,6 +158,7 @@ describe("regles — logique pure du cycle", () => {
         lacunes: [],
         erreursFrequentes: [],
         preferencesPedagogiques: [],
+        notionsMaitrisees: [],
         miseAJour: "2026",
       },
       roadmap: null,
@@ -151,5 +174,38 @@ describe("regles — logique pure du cycle", () => {
     const recompense = creerRecompense(roadmap.notions[0]!);
     expect(recompense.titre).toBe("Notion A");
     expect(recompense.message).toContain("Notion A");
+  });
+
+  it("enrichirProfil ajoute une lacune et une erreur cognitive si incorrecte", () => {
+    const notion = roadmap.notions[0]!;
+    const enrichi = enrichirProfil(
+      profil(),
+      analyse({
+        correcte: false,
+        connaissanceManquante: "prérequis manquant",
+        erreurCognitive: "mélange de concepts",
+      }),
+      notion,
+    );
+    expect(enrichi.lacunes).toHaveLength(1);
+    expect(enrichi.lacunes[0]?.sujet).toBe("Notion A");
+    expect(enrichi.lacunes[0]?.description).toBe("prérequis manquant");
+    expect(enrichi.erreursFrequentes).toContain("mélange de concepts");
+  });
+
+  it("enrichirProfil ne modifie pas les lacunes si réponse correcte", () => {
+    const enrichi = enrichirProfil(profil(), analyse(), roadmap.notions[0]!);
+    expect(enrichi.lacunes).toHaveLength(0);
+    expect(enrichi.erreursFrequentes).toHaveLength(0);
+  });
+
+  it("marquerNotionMaitrisee ajoute la notion et purge les lacunes associées", () => {
+    const notion = roadmap.notions[0]!;
+    const avecLacune = profil({
+      lacunes: [{ sujet: "Notion A", description: "confusion" }],
+    });
+    const marque = marquerNotionMaitrisee(avecLacune, notion);
+    expect(marque.notionsMaitrisees).toEqual(["n1"]);
+    expect(marque.lacunes).toHaveLength(0);
   });
 });

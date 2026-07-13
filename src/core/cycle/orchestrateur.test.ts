@@ -11,7 +11,10 @@ function creerRoadmap(notions: Roadmap["notions"]): Roadmap {
   return { objectifId: "obj-1", version: 1, notions };
 }
 
-function creerContexte(roadmap: Roadmap): ContexteApprentissage {
+function creerContexte(
+  roadmap: Roadmap,
+  overrides: Partial<ContexteApprentissage> = {},
+): ContexteApprentissage {
   return {
     domaine: { id: "maths", nom: "Mathématiques" },
     objectif: {
@@ -27,20 +30,21 @@ function creerContexte(roadmap: Roadmap): ContexteApprentissage {
       lacunes: [],
       erreursFrequentes: [],
       preferencesPedagogiques: [],
+      notionsMaitrisees: [],
       miseAJour: "2026-01-01T00:00:00.000Z",
     },
     roadmap,
     notionCouranteId: null,
     reponsesDiagnostic: [],
+    ...overrides,
   };
 }
 
 async function avancerJusquAuxExercices(
   orchestrateur: OrchestrateurCycle,
   contexte: ContexteApprentissage,
-  notionsMaitrisees: readonly string[] = [],
 ) {
-  let etat = await orchestrateur.demarrer(contexte, notionsMaitrisees);
+  let etat = await orchestrateur.demarrer(contexte);
   etat = await orchestrateur.avancer(etat);
   etat = await orchestrateur.avancer(etat);
   return orchestrateur.avancer(etat);
@@ -49,13 +53,8 @@ async function avancerJusquAuxExercices(
 async function maitriserNotion(
   orchestrateur: OrchestrateurCycle,
   contexte: ContexteApprentissage,
-  notionsMaitrisees: readonly string[] = [],
 ) {
-  let etat = await avancerJusquAuxExercices(
-    orchestrateur,
-    contexte,
-    notionsMaitrisees,
-  );
+  let etat = await avancerJusquAuxExercices(orchestrateur, contexte);
   for (let i = 0; i < 3; i++) {
     etat = await orchestrateur.repondreExercice(etat, {
       exerciceId: etat.etatExercices!.exerciceCourant.id,
@@ -121,8 +120,33 @@ describe("OrchestrateurCycle", () => {
 
     etat = await maitriserNotion(orchestrateur, contexte);
     expect(etat.etape).toBe("recompense");
-    expect(etat.notionsMaitrisees).toContain("n1");
+    expect(etat.contexte.profil.notionsMaitrisees).toContain("n1");
     expect(etat.contenu.type).toBe("recompense");
+    if (etat.contenu.type === "recompense") {
+      expect(etat.contenu.correctionPrecedente).toBeDefined();
+    }
+  });
+
+  it("rejette demarrer sans roadmap", async () => {
+    const orchestrateur = new OrchestrateurCycle(creerCapacitesMock());
+    const contexte = creerContexte(roadmapSimple, { roadmap: null });
+    await expect(orchestrateur.demarrer(contexte)).rejects.toThrow(
+      "L'orchestrateur du Cycle requiert une roadmap",
+    );
+  });
+
+  it("rejette une réponse pour un exercice différent", async () => {
+    const orchestrateur = new OrchestrateurCycle(creerCapacitesMock());
+    const etat = await avancerJusquAuxExercices(
+      orchestrateur,
+      creerContexte(roadmapSimple),
+    );
+    await expect(
+      orchestrateur.repondreExercice(etat, {
+        exerciceId: "exo-invalide",
+        contenu: "réponse",
+      }),
+    ).rejects.toThrow("La réponse ne correspond pas à l'exercice courant");
   });
 
   it("déclenche la remédiation sur réponse incorrecte", async () => {
@@ -145,11 +169,20 @@ describe("OrchestrateurCycle", () => {
     expect(etat.etape).toBe("exercices");
     expect(etat.etatExercices?.lacuneActive).toBe("confusion sur les prérequis");
     expect(etat.etatExercices?.guidageActuel).toBe("fort");
+    expect(etat.contexte.profil.lacunes).toHaveLength(1);
     expect(etat.contenu.type).toBe("exercice");
     if (etat.contenu.type === "exercice") {
       expect(etat.contenu.exercice.cibleLacune).toBe("confusion sur les prérequis");
       expect(etat.contenu.correctionPrecedente).toBeDefined();
     }
+  });
+
+  it("ignore notionCouranteId si les prérequis ne sont pas satisfaits", async () => {
+    const orchestrateur = new OrchestrateurCycle(creerCapacitesMock());
+    const contexte = creerContexte(roadmapDouble, { notionCouranteId: "n2" });
+
+    const etat = await orchestrateur.demarrer(contexte);
+    expect(etat.contexte.notionCouranteId).toBe("n1");
   });
 
   it("progresse le guidage fort → modere → autonome", async () => {
@@ -204,7 +237,7 @@ describe("OrchestrateurCycle", () => {
     });
     expect(etat.etape).toBe("exercices");
     expect(etat.etatExercices?.guidageActuel).toBe("fort");
-    expect(etat.notionsMaitrisees).toHaveLength(0);
+    expect(etat.contexte.profil.notionsMaitrisees).toHaveLength(0);
   });
 
   it("passe à la notion suivante après récompense", async () => {
@@ -214,7 +247,7 @@ describe("OrchestrateurCycle", () => {
 
     let etat = await maitriserNotion(orchestrateur, contexte);
     expect(etat.etape).toBe("recompense");
-    expect(etat.notionsMaitrisees).toEqual(["n1"]);
+    expect(etat.contexte.profil.notionsMaitrisees).toEqual(["n1"]);
 
     etat = await orchestrateur.terminerEtPasserSuivant(etat);
     expect(etat.termine).toBe(false);
@@ -230,9 +263,8 @@ describe("OrchestrateurCycle", () => {
     let etat = await maitriserNotion(orchestrateur, contexte);
     etat = await orchestrateur.terminerEtPasserSuivant(etat);
 
-    const contexteN2 = etat.contexte;
-    etat = await maitriserNotion(orchestrateur, contexteN2, etat.notionsMaitrisees);
-    expect(etat.notionsMaitrisees).toEqual(["n1", "n2"]);
+    etat = await maitriserNotion(orchestrateur, etat.contexte);
+    expect(etat.contexte.profil.notionsMaitrisees).toEqual(["n1", "n2"]);
 
     etat = await orchestrateur.terminerEtPasserSuivant(etat);
     expect(etat.termine).toBe(true);
@@ -242,7 +274,7 @@ describe("OrchestrateurCycle", () => {
     }
   });
 
-  it("persiste profil et roadmap après maîtrise d'une notion", async () => {
+  it("persiste profil, objectif et roadmap après maîtrise d'une notion", async () => {
     const capacites = creerCapacitesMock();
     const persistance = creerPersistanceMemoire();
     const orchestrateur = new OrchestrateurCycle({ ...capacites, persistance });
@@ -253,7 +285,10 @@ describe("OrchestrateurCycle", () => {
 
     const profil = await persistance.chargerProfil("obj-1");
     const roadmap = await persistance.chargerRoadmap("obj-1");
+    const objectifs = await persistance.chargerObjectifs("maths");
     expect(profil).not.toBeNull();
+    expect(profil?.notionsMaitrisees).toContain("n1");
     expect(roadmap).not.toBeNull();
+    expect(objectifs).toHaveLength(1);
   });
 });

@@ -74,6 +74,7 @@ export function creerCapacitesMock(options: OptionsCapacitesMock = {}): {
         lacunes: [],
         erreursFrequentes: [],
         preferencesPedagogiques: [],
+        notionsMaitrisees: [],
         miseAJour: new Date().toISOString(),
       };
     },

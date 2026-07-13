@@ -29,5 +29,7 @@ export interface ProfilApprenant {
   readonly lacunes: readonly Lacune[];
   readonly erreursFrequentes: readonly string[];
   readonly preferencesPedagogiques: readonly string[];
+  /** Notions maîtrisées — source unique de la progression. */
+  readonly notionsMaitrisees: readonly string[];
   readonly miseAJour: string;
 }

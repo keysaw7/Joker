@@ -447,9 +447,9 @@ Si l'une des deux réponses est « non », il faut reconsidérer la décision.
 | Ports (`src/core/ports/`) | ✅ |
 | Adaptateurs mock (`src/adapters/`) | ✅ — mock IA (configurable), fallback Bible, mémoire |
 | Orchestrateur du Cycle (`src/core/cycle/`) | ✅ — étapes 5→9, boucle remédiation, persistance |
-| ParcoursApprentissage (diagnostic + planification) | ⬜ À venir |
+| ParcoursApprentissage (`src/core/parcours/`) | ✅ — diagnostic + planification, testé hors ligne |
 | Interface utilisateur (`src/app/`) | ⬜ À venir |
 
-Le diagnostic et la planification initiale seront gérés par un futur composant `ParcoursApprentissage`, hors périmètre de l'orchestrateur du Cycle.
+Le `ParcoursApprentissage` produit un `ContexteApprentissage` prêt (profil + roadmap) consommable par l'`OrchestrateurCycle`. La reprise d'un objectif existant reste hors scope pour l'instant.
 
 Le code sera construit **progressivement**, module par module, en cohérence stricte avec ce document. Chaque module n'est créé que lorsque le besoin réel le justifie.
