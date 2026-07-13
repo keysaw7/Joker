@@ -446,10 +446,26 @@ Si l'une des deux réponses est « non », il faut reconsidérer la décision.
 | Modèle du domaine (`src/core/domain/`) | ✅ |
 | Ports (`src/core/ports/`) | ✅ |
 | Adaptateurs mock (`src/adapters/`) | ✅ — mock IA (configurable), fallback Bible, mémoire |
+| Adaptateurs IA réels (`src/adapters/ai/`) | ✅ — Anthropic, OpenAI, Google via Vercel AI SDK + sélecteur UI |
 | Orchestrateur du Cycle (`src/core/cycle/`) | ✅ — étapes 5→9, boucle remédiation, persistance |
 | ParcoursApprentissage (`src/core/parcours/`) | ✅ — diagnostic + planification, testé hors ligne |
-| Interface utilisateur (`src/app/`) | ⬜ À venir |
+| Interface utilisateur (`src/app/`) | ✅ — App Router + Tailwind, Server Actions, IA en arrière-plan |
 
 Le `ParcoursApprentissage` produit un `ContexteApprentissage` prêt (profil + roadmap) consommable par l'`OrchestrateurCycle`. La reprise d'un objectif existant reste hors scope pour l'instant.
+
+### Configuration des adaptateurs IA
+
+L'application propose un sélecteur fournisseur/modèle sur l'écran d'accueil. Le mode **Mock** fonctionne hors ligne sans clé API.
+
+Pour utiliser un fournisseur réel :
+
+1. Copier `.env.local.example` en `.env.local`
+2. Renseigner la clé du fournisseur choisi :
+   - `ANTHROPIC_API_KEY` — Anthropic
+   - `OPENAI_API_KEY` — OpenAI
+   - `GOOGLE_GENERATIVE_AI_API_KEY` — Google
+3. Redémarrer le serveur de développement (`npm run dev`)
+
+Si une clé est manquante, l'application affiche une erreur explicite au premier appel IA.
 
 Le code sera construit **progressivement**, module par module, en cohérence stricte avec ce document. Chaque module n'est créé que lorsque le besoin réel le justifie.
