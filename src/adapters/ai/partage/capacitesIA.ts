@@ -26,6 +26,8 @@ import type {
 } from "@/core/ports";
 import { generateText, type LanguageModel, Output } from "ai";
 import type { z } from "zod";
+import { traceIdCourant } from "@/adapters/logging/contexteTrace";
+import { journalIA } from "@/adapters/logging/journal";
 import { construireRoadmapDepuisGeneration } from "./construireRoadmap";
 import {
   promptAdaptation,
@@ -56,23 +58,60 @@ import {
 
 const SEUIL_QUESTIONS_DIAGNOSTIC = 4;
 
+function idModele(modele: LanguageModel): string {
+  if (typeof modele === "string") return modele;
+  return modele.modelId ?? "inconnu";
+}
+
 async function genererStructure<T>(
   modele: LanguageModel,
   schema: z.ZodType<T>,
   prompt: string,
+  etiquette: string,
 ): Promise<T> {
-  const { output } = await generateText({
-    model: modele,
-    system: promptSysteme(),
-    prompt,
-    output: Output.object({ schema }),
-  });
+  const debut = performance.now();
+  const traceId = traceIdCourant();
+  const nomModele = idModele(modele);
 
-  if (output == null) {
-    throw new Error("Le modèle n'a pas généré de réponse structurée.");
+  try {
+    const resultat = await generateText({
+      model: modele,
+      system: promptSysteme(),
+      prompt,
+      output: Output.object({ schema }),
+    });
+
+    const dureeMs = Math.round(performance.now() - debut);
+
+    if (resultat.output == null) {
+      const erreur = new Error("Le modèle n'a pas généré de réponse structurée.");
+      journalIA(nomModele, etiquette, dureeMs, undefined, traceId, erreur);
+      throw erreur;
+    }
+
+    journalIA(
+      nomModele,
+      etiquette,
+      dureeMs,
+      {
+        inputTokens: resultat.usage?.inputTokens,
+        outputTokens: resultat.usage?.outputTokens,
+      },
+      traceId,
+    );
+
+    return resultat.output;
+  } catch (erreur) {
+    journalIA(
+      nomModele,
+      etiquette,
+      Math.round(performance.now() - debut),
+      undefined,
+      traceId,
+      erreur,
+    );
+    throw erreur;
   }
-
-  return output;
 }
 
 /** Implémentation des 8 capacités IA via génération structurée. */
@@ -92,6 +131,7 @@ export function creerCapacitesIA(modele: LanguageModel): {
         modele,
         schemaQuestionDiagnostic,
         promptQuestionDiagnostic(contexte),
+        "questionDiagnostic",
       );
       return { id: crypto.randomUUID(), intitule: generee.intitule };
     },
@@ -105,6 +145,7 @@ export function creerCapacitesIA(modele: LanguageModel): {
         modele,
         schemaProfilSansIds,
         promptConstruireProfil(contexte),
+        "profil",
       );
       return {
         objectifId: contexte.objectif.id,
@@ -120,6 +161,7 @@ export function creerCapacitesIA(modele: LanguageModel): {
         modele,
         schemaRoadmapSansIds,
         promptGenererRoadmap(contexte),
+        "roadmap",
       );
       return construireRoadmapDepuisGeneration(
         contexte.objectif.id,
@@ -135,6 +177,7 @@ export function creerCapacitesIA(modele: LanguageModel): {
         modele,
         schemaProblematiqueSansNotionId,
         promptGenererProblematique(contexte, notion),
+        "problematique",
       );
       return { notionId: notion.id, ...generee };
     },
@@ -144,6 +187,7 @@ export function creerCapacitesIA(modele: LanguageModel): {
         modele,
         schemaCoursSansNotionId,
         promptGenererCours(contexte, notion),
+        "cours",
       );
       return { notionId: notion.id, ...genere };
     },
@@ -153,6 +197,7 @@ export function creerCapacitesIA(modele: LanguageModel): {
         modele,
         schemaExempleExpertSansNotionId,
         promptGenererExempleExpert(contexte, notion),
+        "exempleExpert",
       );
       return { notionId: notion.id, ...genere };
     },
@@ -164,6 +209,7 @@ export function creerCapacitesIA(modele: LanguageModel): {
         modele,
         schemaExerciceSansIds,
         promptGenererExercice(contexte, notion, guidage),
+        "exercice",
       );
       return {
         id: crypto.randomUUID(),
@@ -179,6 +225,7 @@ export function creerCapacitesIA(modele: LanguageModel): {
         modele,
         schemaAnalyseReponse,
         promptAnalyserReponse(contexte, exercice, reponse),
+        "analyseReponse",
       );
     },
   };
@@ -189,6 +236,7 @@ export function creerCapacitesIA(modele: LanguageModel): {
         modele,
         schemaCorrectionSansIds,
         promptCorriger(contexte, exercice, JSON.stringify(analyse, null, 2)),
+        "correction",
       );
       return {
         exerciceId: exercice.id,
@@ -204,6 +252,7 @@ export function creerCapacitesIA(modele: LanguageModel): {
         modele,
         schemaExerciceSansIds,
         promptRemediation(contexte, notion, lacune),
+        "remediation",
       );
       return {
         id: crypto.randomUUID(),
@@ -221,6 +270,7 @@ export function creerCapacitesIA(modele: LanguageModel): {
         modele,
         schemaResultatAdaptationSansIds,
         promptAdaptation(contexte),
+        "adaptation",
       );
 
       const version = (contexte.roadmap?.version ?? 0) + 1;

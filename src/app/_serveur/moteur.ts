@@ -2,6 +2,7 @@ import { creerModele } from "@/adapters/ai/creerModele";
 import type { SelectionModele } from "@/adapters/ai/fournisseurs";
 import { creerCapacitesMock } from "@/adapters/ai/mock/capacitesMock";
 import { creerCapacitesIA } from "@/adapters/ai/partage/capacitesIA";
+import { tracerCapacites } from "@/adapters/logging/tracerCapacites";
 import { creerPersistanceMemoire } from "@/adapters/persistence/memoire";
 import { OrchestrateurCycle } from "@/core/cycle/orchestrateur";
 import { OrchestrateurParcours } from "@/core/parcours/orchestrateurParcours";
@@ -11,10 +12,12 @@ const persistance = creerPersistanceMemoire();
 type Capacites = ReturnType<typeof creerCapacitesMock>;
 
 function obtenirCapacites(selection: SelectionModele): Capacites {
-  if (selection.fournisseur === "mock") {
-    return creerCapacitesMock();
-  }
-  return creerCapacitesIA(creerModele(selection));
+  const brutes =
+    selection.fournisseur === "mock"
+      ? creerCapacitesMock()
+      : creerCapacitesIA(creerModele(selection));
+
+  return tracerCapacites(brutes);
 }
 
 export function creerParcours(selection: SelectionModele): OrchestrateurParcours {

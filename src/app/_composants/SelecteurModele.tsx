@@ -1,5 +1,6 @@
 import {
   FOURNISSEURS,
+  grouperModelesParCategorie,
   type IdFournisseur,
   type SelectionModele,
   trouverFournisseur,
@@ -15,6 +16,7 @@ const styleSelect =
 
 export function SelecteurModele({ selection, onChanger }: SelecteurModeleProps) {
   const fournisseur = trouverFournisseur(selection.fournisseur) ?? FOURNISSEURS[0]!;
+  const groupes = grouperModelesParCategorie(fournisseur.modeles);
 
   return (
     <section className="flex flex-col gap-4 rounded-xl border border-[var(--color-bordure)] bg-[var(--color-surface)] p-4">
@@ -69,10 +71,14 @@ export function SelecteurModele({ selection, onChanger }: SelecteurModeleProps) 
               onChanger({ fournisseur: selection.fournisseur, modele: e.target.value })
             }
           >
-            {fournisseur.modeles.map((modele) => (
-              <option key={modele.id} value={modele.id}>
-                {modele.nom}
-              </option>
+            {groupes.map((groupe) => (
+              <optgroup key={groupe.categorie} label={groupe.libelle}>
+                {groupe.modeles.map((modele) => (
+                  <option key={modele.id} value={modele.id}>
+                    {modele.nom}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>
