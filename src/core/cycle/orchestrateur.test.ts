@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-  creerCapacitesMock,
+  creerDependancesCycleMock,
   reinitialiserCompteurMock,
 } from "@/adapters/ai/mock/capacitesMock";
 import { creerPersistanceMemoire } from "@/adapters/persistence/memoire";
@@ -100,8 +100,7 @@ describe("OrchestrateurCycle", () => {
   ]);
 
   it("enchaîne le cycle complet 5→9", async () => {
-    const capacites = creerCapacitesMock();
-    const orchestrateur = new OrchestrateurCycle(capacites);
+    const orchestrateur = new OrchestrateurCycle(creerDependancesCycleMock());
     const contexte = creerContexte(roadmapSimple);
 
     let etat = await orchestrateur.demarrer(contexte);
@@ -128,7 +127,7 @@ describe("OrchestrateurCycle", () => {
   });
 
   it("rejette demarrer sans roadmap", async () => {
-    const orchestrateur = new OrchestrateurCycle(creerCapacitesMock());
+    const orchestrateur = new OrchestrateurCycle(creerDependancesCycleMock());
     const contexte = creerContexte(roadmapSimple, { roadmap: null });
     await expect(orchestrateur.demarrer(contexte)).rejects.toThrow(
       "L'orchestrateur du Cycle requiert une roadmap",
@@ -136,7 +135,7 @@ describe("OrchestrateurCycle", () => {
   });
 
   it("rejette une réponse pour un exercice différent", async () => {
-    const orchestrateur = new OrchestrateurCycle(creerCapacitesMock());
+    const orchestrateur = new OrchestrateurCycle(creerDependancesCycleMock());
     const etat = await avancerJusquAuxExercices(
       orchestrateur,
       creerContexte(roadmapSimple),
@@ -150,14 +149,15 @@ describe("OrchestrateurCycle", () => {
   });
 
   it("déclenche la remédiation sur réponse incorrecte", async () => {
-    const capacites = creerCapacitesMock({
-      analyser: async () => ({
-        correcte: false,
-        pourquoi: "Confusion sur les prérequis",
-        connaissanceManquante: "confusion sur les prérequis",
+    const orchestrateur = new OrchestrateurCycle(
+      creerDependancesCycleMock({
+        analyser: async () => ({
+          correcte: false,
+          pourquoi: "Confusion sur les prérequis",
+          connaissanceManquante: "confusion sur les prérequis",
+        }),
       }),
-    });
-    const orchestrateur = new OrchestrateurCycle(capacites);
+    );
     const contexte = creerContexte(roadmapSimple);
 
     let etat = await avancerJusquAuxExercices(orchestrateur, contexte);
@@ -178,7 +178,7 @@ describe("OrchestrateurCycle", () => {
   });
 
   it("ignore notionCouranteId si les prérequis ne sont pas satisfaits", async () => {
-    const orchestrateur = new OrchestrateurCycle(creerCapacitesMock());
+    const orchestrateur = new OrchestrateurCycle(creerDependancesCycleMock());
     const contexte = creerContexte(roadmapDouble, { notionCouranteId: "n2" });
 
     const etat = await orchestrateur.demarrer(contexte);
@@ -186,8 +186,7 @@ describe("OrchestrateurCycle", () => {
   });
 
   it("progresse le guidage fort → modere → autonome", async () => {
-    const capacites = creerCapacitesMock();
-    const orchestrateur = new OrchestrateurCycle(capacites);
+    const orchestrateur = new OrchestrateurCycle(creerDependancesCycleMock());
     const contexte = creerContexte(roadmapSimple);
 
     let etat = await avancerJusquAuxExercices(orchestrateur, contexte);
@@ -208,16 +207,17 @@ describe("OrchestrateurCycle", () => {
 
   it("bloque la maîtrise si réponse incorrecte en guidage autonome", async () => {
     let appels = 0;
-    const capacites = creerCapacitesMock({
-      analyser: async (_ctx, _exo, _rep) => {
-        appels += 1;
-        if (appels <= 2) {
-          return { correcte: true, pourquoi: "ok" };
-        }
-        return { correcte: false, pourquoi: "erreur en autonome", confusion: "mélange" };
-      },
-    });
-    const orchestrateur = new OrchestrateurCycle(capacites);
+    const orchestrateur = new OrchestrateurCycle(
+      creerDependancesCycleMock({
+        analyser: async () => {
+          appels += 1;
+          if (appels <= 2) {
+            return { correcte: true, pourquoi: "ok" };
+          }
+          return { correcte: false, pourquoi: "erreur en autonome", confusion: "mélange" };
+        },
+      }),
+    );
     const contexte = creerContexte(roadmapSimple);
 
     let etat = await avancerJusquAuxExercices(orchestrateur, contexte);
@@ -241,8 +241,7 @@ describe("OrchestrateurCycle", () => {
   });
 
   it("passe à la notion suivante après récompense", async () => {
-    const capacites = creerCapacitesMock();
-    const orchestrateur = new OrchestrateurCycle(capacites);
+    const orchestrateur = new OrchestrateurCycle(creerDependancesCycleMock());
     const contexte = creerContexte(roadmapDouble);
 
     let etat = await maitriserNotion(orchestrateur, contexte);
@@ -256,8 +255,7 @@ describe("OrchestrateurCycle", () => {
   });
 
   it("termine le parcours quand toutes les notions sont maîtrisées", async () => {
-    const capacites = creerCapacitesMock();
-    const orchestrateur = new OrchestrateurCycle(capacites);
+    const orchestrateur = new OrchestrateurCycle(creerDependancesCycleMock());
     const contexte = creerContexte(roadmapDouble);
 
     let etat = await maitriserNotion(orchestrateur, contexte);
@@ -275,9 +273,11 @@ describe("OrchestrateurCycle", () => {
   });
 
   it("persiste profil, objectif et roadmap après maîtrise d'une notion", async () => {
-    const capacites = creerCapacitesMock();
     const persistance = creerPersistanceMemoire();
-    const orchestrateur = new OrchestrateurCycle({ ...capacites, persistance });
+    const orchestrateur = new OrchestrateurCycle({
+      ...creerDependancesCycleMock(),
+      persistance,
+    });
     const contexte = creerContexte(roadmapSimple);
 
     const etat = await maitriserNotion(orchestrateur, contexte);

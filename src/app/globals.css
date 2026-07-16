@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "katex/dist/katex.min.css";
 
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -18,4 +19,146 @@ body {
   color: var(--color-texte);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+@keyframes blocApparition {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bloc-cours-animate {
+  animation: blocApparition 0.45s ease-out both;
+}
+
+.prose-cours {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  line-height: 1.7;
+}
+
+.prose-cours h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.prose-cours h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.prose-cours h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.prose-cours p {
+  color: var(--color-texte);
+}
+
+.prose-cours ul,
+.prose-cours ol {
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.prose-cours ul {
+  list-style-type: disc;
+}
+
+.prose-cours ol {
+  list-style-type: decimal;
+}
+
+.prose-cours code {
+  border-radius: 0.25rem;
+  background: var(--color-fond);
+  padding: 0.1rem 0.35rem;
+  font-size: 0.875em;
+}
+
+.prose-cours pre {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  background: var(--color-fond);
+  padding: 1rem;
+  font-size: 0.875rem;
+}
+
+.prose-cours blockquote {
+  border-left: 3px solid var(--color-accent);
+  padding-left: 1rem;
+  color: var(--color-texte-secondaire);
+}
+
+.prose-cours strong {
+  font-weight: 600;
+}
+
+.mermaid-cours svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* App shell — pleine largeur avec sidebar session */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+.app-shell-contenu {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+}
+
+.app-shell-principal {
+  flex: 1;
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding: 1.5rem 2rem 3rem;
+}
+
+.app-shell-session {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+  gap: 0;
+  width: 100%;
+  min-height: 0;
+}
+
+.app-shell-session-contenu {
+  overflow-y: auto;
+  padding: 1.5rem 2rem 3rem;
+}
+
+.contenu-lecture {
+  max-width: 48rem;
+}
+
+.contenu-large {
+  max-width: 64rem;
+}
+
+@media (max-width: 768px) {
+  .app-shell-session {
+    grid-template-columns: 1fr;
+  }
+
+  .app-shell-principal,
+  .app-shell-session-contenu {
+    padding: 1rem 1.25rem 2rem;
+  }
 }

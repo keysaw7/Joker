@@ -31,7 +31,7 @@ const contexte = {
 const etatParcours: EtatParcours = {
   contexte,
   phase: "diagnostic",
-  questionCourante: { id: "q-1", intitule: "Quel est ton niveau ?" },
+  questions: [{ id: "q-1", intitule: "Quel est ton niveau ?" }],
 };
 
 const sessionDiagnostic: SessionPersistee = {
@@ -40,6 +40,7 @@ const sessionDiagnostic: SessionPersistee = {
   miseAJour: "2026-07-13T10:00:00.000Z",
   etatParcours,
   etatCycle: null,
+  archive: null,
 };
 
 const sessionJaponais: SessionPersistee = {
@@ -66,6 +67,7 @@ const sessionJaponais: SessionPersistee = {
     },
   },
   etatCycle: null,
+  archive: null,
 };
 
 describe("creerPersistanceFichier", () => {

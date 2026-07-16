@@ -23,51 +23,50 @@ export class OrchestrateurParcours {
 
   async demarrer(domaine: Domaine, objectif: Objectif): Promise<EtatParcours> {
     const contexte = contexteInitial(domaine, objectif);
-    const questionCourante = await this.deps.diagnostic.genererQuestion(contexte);
+    const questions = await this.deps.diagnostic.genererQuestions(contexte);
 
     return {
       contexte,
       phase: "diagnostic",
-      questionCourante,
+      questions,
     };
   }
 
-  async repondre(
+  async finaliserDiagnostic(
     etat: EtatParcours,
-    reponse: ReponseDiagnostic,
+    reponses: readonly ReponseDiagnostic[],
   ): Promise<EtatParcours> {
     if (etat.phase !== "diagnostic") {
-      throw new Error("repondre n'est disponible qu'en phase diagnostic");
+      throw new Error("finaliserDiagnostic n'est disponible qu'en phase diagnostic");
     }
 
-    if (reponse.questionId !== etat.questionCourante?.id) {
-      throw new Error("La réponse ne correspond pas à la question courante");
+    if (reponses.length !== etat.questions.length) {
+      throw new Error("Nombre de réponses incorrect");
     }
 
-    let contexte = ajouterReponse(etat.contexte, reponse);
-
-    if (await this.deps.diagnostic.estTermine(contexte)) {
-      const profil = await this.deps.diagnostic.construireProfil(contexte);
-      contexte = { ...contexte, profil };
-
-      const roadmap = await this.deps.planification.genererRoadmap(contexte);
-      contexte = { ...contexte, roadmap };
-
-      await this.persiste(contexte);
-
-      return {
-        contexte,
-        phase: "pret",
-        questionCourante: null,
-      };
+    for (let i = 0; i < reponses.length; i++) {
+      if (reponses[i]!.questionId !== etat.questions[i]!.id) {
+        throw new Error("Les réponses ne correspondent pas aux questions");
+      }
     }
 
-    const questionCourante = await this.deps.diagnostic.genererQuestion(contexte);
+    let contexte = etat.contexte;
+    for (const reponse of reponses) {
+      contexte = ajouterReponse(contexte, reponse);
+    }
+
+    const profil = await this.deps.diagnostic.construireProfil(contexte);
+    contexte = { ...contexte, profil };
+
+    const roadmap = await this.deps.planification.genererRoadmap(contexte);
+    contexte = { ...contexte, roadmap };
+
+    await this.persiste(contexte);
 
     return {
       contexte,
-      phase: "diagnostic",
-      questionCourante,
+      phase: "pret",
+      questions: [],
     };
   }
 

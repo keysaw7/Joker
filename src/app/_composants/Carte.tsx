@@ -11,12 +11,12 @@ export function Carte({
   ...props
 }: CarteProps) {
   const interactiveStyles = interactive
-    ? "cursor-pointer hover:border-[var(--color-accent)] hover:shadow-sm"
+    ? "cursor-pointer hover:border-accent hover:shadow-sm"
     : "";
 
   return (
     <div
-      className={`rounded-[var(--radius-carte)] border border-[var(--color-bordure)] bg-[var(--color-surface)] p-6 ${interactiveStyles} ${className}`}
+      className={`rounded-carte border border-bordure bg-surface p-6 ${interactiveStyles} ${className}`}
       {...props}
     >
       {children}

@@ -1,4 +1,5 @@
 import type { Objectif, ProfilApprenant, Roadmap, SessionPersistee } from "@/core/domain";
+import type { ChampsProfilElevePersistes } from "@/core/domain/profilEleve";
 import type { Persistance } from "@/core/ports";
 import { listerResumesSessions } from "./partage";
 
@@ -8,6 +9,7 @@ export function creerPersistanceMemoire(): Persistance {
   const roadmaps = new Map<string, Roadmap>();
   const objectifs = new Map<string, Objectif[]>();
   const sessions = new Map<string, SessionPersistee>();
+  let profilEleve: ChampsProfilElevePersistes | null = null;
 
   return {
     async sauvegarderProfil(profil): Promise<void> {
@@ -49,8 +51,35 @@ export function creerPersistanceMemoire(): Persistance {
     async chargerSession(objectifId): Promise<SessionPersistee | null> {
       return sessions.get(objectifId) ?? null;
     },
+    async supprimerSession(objectifId): Promise<void> {
+      const session = sessions.get(objectifId);
+      if (!session) {
+        return;
+      }
+
+      sessions.delete(objectifId);
+      profils.delete(objectifId);
+      roadmaps.delete(objectifId);
+
+      const liste = objectifs.get(session.objectif.domaineId) ?? [];
+      objectifs.set(
+        session.objectif.domaineId,
+        liste.filter((objectif) => objectif.id !== objectifId),
+      );
+    },
     async listerSessions(domaineId) {
       return listerResumesSessions([...sessions.values()], domaineId);
+    },
+    async chargerToutesSessions() {
+      return [...sessions.values()].sort((a, b) =>
+        b.miseAJour.localeCompare(a.miseAJour),
+      );
+    },
+    async chargerProfilEleve() {
+      return profilEleve;
+    },
+    async sauvegarderProfilEleve(champs): Promise<void> {
+      profilEleve = champs;
     },
   };
 }

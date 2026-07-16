@@ -17,8 +17,8 @@ export function Bouton({
     "inline-flex items-center justify-center rounded-lg px-5 py-2.5 text-sm font-medium transition-colors disabled:opacity-50";
   const styles =
     variante === "primaire"
-      ? "bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)]"
-      : "border border-[var(--color-bordure)] bg-[var(--color-surface)] text-[var(--color-texte)] hover:bg-[var(--color-fond)]";
+      ? "bg-accent text-white hover:bg-accent-hover"
+      : "border border-bordure bg-surface text-texte hover:bg-fond";
 
   return (
     <button

@@ -244,6 +244,12 @@ export const SELECTION_DEFAUT: SelectionModele = {
   modele: "gpt-5-nano",
 };
 
+/** Sélection économique pour la génération d'images pédagogiques. */
+export const SELECTION_DEFAUT_IMAGE: SelectionModele = {
+  fournisseur: "google",
+  modele: "imagen-4.0-fast-generate-001",
+};
+
 export function trouverFournisseur(id: IdFournisseur): FournisseurIA | undefined {
   return FOURNISSEURS.find((f) => f.id === id);
 }

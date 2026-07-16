@@ -1,3 +1,4 @@
+import { creerConcepteurDeCours } from "@/core/cours/concepteurDeCours";
 import type {
   AnalyseReponse,
   ContexteApprentissage,
@@ -5,25 +6,34 @@ import type {
   Cours,
   ExempleExpert,
   Exercice,
-  NiveauGuidage,
+  IntentionBloc,
   Notion,
+  PlanCours,
   Problematique,
   ProfilApprenant,
   QuestionDiagnostic,
   ReponseApprenant,
   Roadmap,
+  SpecGraphique,
 } from "@/core/domain";
 import type {
   Adaptation,
   AnalyseurErreurs,
+  ConcepteurDeCours,
   Correcteur,
   Diagnostic,
   GenerateurDeContenu,
   GenerateurExercices,
+  GenerateurGraphique,
+  GenerateurImage,
+  GenerateurSchema,
+  PlanificateurCours,
   PlanificationPedagogique,
   Remediation,
   ResultatAdaptation,
+  StockageAssets,
 } from "@/core/ports";
+import { creerStockageAssetsMemoire } from "@/adapters/assets/memoire";
 
 let compteurId = 0;
 
@@ -48,11 +58,118 @@ export interface OptionsCapacitesMock {
   nombreNotions?: number;
 }
 
+function planCoursMock(notion: Notion): PlanCours {
+  const intentions: IntentionBloc[] = [
+    {
+      type: "texte",
+      markdown: `# ${notion.titre}\n\nDécouvrons cette notion étape par étape, avec des supports variés.`,
+    },
+    {
+      type: "encadre",
+      variante: "astuce",
+      titre: "Pourquoi c'est utile",
+      markdown: "Cette notion te permet d'aller plus loin dans ton objectif.",
+    },
+    {
+      type: "analogie",
+      source: "une recette de cuisine",
+      cible: notion.titre,
+      explication: "Comme en cuisine, chaque étape s'appuie sur la précédente.",
+    },
+    {
+      type: "schema",
+      briefMedia: `Schéma du processus lié à « ${notion.titre} »`,
+      legende: "Vue d'ensemble",
+    },
+    {
+      type: "graphique",
+      briefMedia: `Évolution de la compréhension de « ${notion.titre} »`,
+      legende: "Progression type",
+    },
+    {
+      type: "image",
+      briefMedia: `Illustration pédagogique claire de « ${notion.titre} »`,
+      alt: `Illustration de ${notion.titre}`,
+    },
+    {
+      type: "etapes",
+      etapes: [
+        { titre: "Observer", markdown: "Identifie le problème concret." },
+        { titre: "Comprendre", markdown: "Relie la notion à ce que tu sais déjà." },
+        { titre: "Appliquer", markdown: "Teste sur un exemple simple." },
+      ],
+    },
+    {
+      type: "quizFlash",
+      question: `Quelle est l'idée centrale de « ${notion.titre} » ?`,
+      options: ["Une formule à mémoriser", "Un raisonnement à comprendre", "Une exception rare"],
+      bonneReponse: 1,
+      explication: "L'objectif est de **comprendre**, pas seulement mémoriser.",
+    },
+  ];
+
+  return { titre: notion.titre, intentions };
+}
+
+function creerGenerateurImageMock(): GenerateurImage {
+  const png1x1 =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+  return {
+    async genererImage({ brief }) {
+      const bytes = Uint8Array.from(atob(png1x1), (c) => c.charCodeAt(0));
+      return {
+        bytes,
+        mediaType: "image/png",
+        alt: brief.slice(0, 80),
+      };
+    },
+  };
+}
+
+function creerGenerateurSchemaMock(): GenerateurSchema {
+  return {
+    async genererSchema({ brief }) {
+      return {
+        mermaid: `flowchart TD\n  A[Début] --> B[${brief.slice(0, 30)}]\n  B --> C[Compréhension]`,
+      };
+    },
+  };
+}
+
+function creerGenerateurGraphiqueMock(): GenerateurGraphique {
+  return {
+    async genererGraphique(): Promise<SpecGraphique> {
+      return {
+        genre: "barres",
+        titre: "Progression (mock)",
+        axeX: "Étape",
+        series: [
+          {
+            nom: "Compréhension",
+            points: [
+              { etiquette: "Début", valeur: 20 },
+              { etiquette: "Milieu", valeur: 55 },
+              { etiquette: "Fin", valeur: 85 },
+            ],
+          },
+        ],
+      };
+    },
+  };
+}
+
 /** Implémentation factice des capacités IA — pour tests et développement hors ligne. */
 export function creerCapacitesMock(options: OptionsCapacitesMock = {}): {
   diagnostic: Diagnostic;
   planification: PlanificationPedagogique;
+  planificateurCours: PlanificateurCours;
   generateurContenu: GenerateurDeContenu;
+  generateurSchema: GenerateurSchema;
+  generateurGraphique: GenerateurGraphique;
+  generateurImage: GenerateurImage;
+  stockageAssets: StockageAssets;
+  concepteurDeCours: ConcepteurDeCours;
   generateurExercices: GenerateurExercices;
   analyseurErreurs: AnalyseurErreurs;
   correcteur: Correcteur;
@@ -60,11 +177,11 @@ export function creerCapacitesMock(options: OptionsCapacitesMock = {}): {
   adaptation: Adaptation;
 } {
   const diagnostic: Diagnostic = {
-    async genererQuestion(): Promise<QuestionDiagnostic> {
-      return { id: prochainId("q"), intitule: "Question de diagnostic (mock)" };
-    },
-    async estTermine(contexte): Promise<boolean> {
-      return contexte.reponsesDiagnostic.length >= 2;
+    async genererQuestions(): Promise<QuestionDiagnostic[]> {
+      return Array.from({ length: 5 }, (_, index) => ({
+        id: prochainId("q"),
+        intitule: `Question de diagnostic ${index + 1} (mock)`,
+      }));
     },
     async construireProfil(contexte): Promise<ProfilApprenant> {
       return {
@@ -103,27 +220,71 @@ export function creerCapacitesMock(options: OptionsCapacitesMock = {}): {
     },
   };
 
+  const planificateurCours: PlanificateurCours = {
+    async genererPlanCours(_contexte, notion): Promise<PlanCours> {
+      return planCoursMock(notion);
+    },
+  };
+
+  const generateurSchema = creerGenerateurSchemaMock();
+  const generateurGraphique = creerGenerateurGraphiqueMock();
+  const generateurImage = creerGenerateurImageMock();
+  const stockageAssets = creerStockageAssetsMemoire();
+
+  const concepteurDeCours = creerConcepteurDeCours({
+    planificateurCours,
+    generateurImage,
+    generateurSchema,
+    generateurGraphique,
+    stockageAssets,
+  });
+
   const generateurContenu: GenerateurDeContenu = {
-    async genererProblematique(_contexte, notion): Promise<Problematique> {
+    async genererProblematique(contexte, notion): Promise<Problematique> {
       return {
         notionId: notion.id,
-        intitule: `Pourquoi apprendre « ${notion.titre} » ?`,
+        intitule: `Pourquoi apprendre « ${notion.titre} » pour « ${contexte.objectif.intitule} » ?`,
         forme: "question",
+        casDusage: [
+          {
+            titre: `Appliquer « ${notion.titre} » au quotidien`,
+            description: `Utiliser cette notion dans des situations concrètes liées à ton objectif.`,
+          },
+          {
+            titre: `Progresser vers « ${contexte.objectif.intitule} »`,
+            description: `Maîtriser une brique essentielle pour avancer dans ton projet.`,
+          },
+          {
+            titre: "Gagner en autonomie",
+            description: `Résoudre seul des situations réelles sans aide extérieure.`,
+          },
+        ],
       };
     },
-    async genererCours(_contexte, notion): Promise<Cours> {
-      return {
-        notionId: notion.id,
-        titre: notion.titre,
-        blocs: [{ format: "texte", contenu: `Cours mock pour « ${notion.titre} ».` }],
-      };
+    async genererCours(contexte, notion): Promise<Cours> {
+      return concepteurDeCours.composerCours(contexte, notion);
     },
     async genererExempleExpert(_contexte, notion): Promise<ExempleExpert> {
       return {
         notionId: notion.id,
         contexte: "Situation réelle (mock)",
         demonstration: [
-          { format: "texte", contenu: `Démonstration experte de « ${notion.titre} ».` },
+          {
+            type: "texte",
+            markdown: `Un expert utilise « ${notion.titre} » pour résoudre un problème concret.`,
+          },
+          {
+            type: "encadre",
+            variante: "exemple",
+            titre: "En pratique",
+            markdown: "Voici comment un professionnel raisonne étape par étape.",
+          },
+          {
+            type: "analogie",
+            source: "un GPS",
+            cible: notion.titre,
+            explication: "Comme un GPS recalcule l'itinéraire, l'expert ajuste sa méthode.",
+          },
         ],
       };
     },
@@ -182,11 +343,31 @@ export function creerCapacitesMock(options: OptionsCapacitesMock = {}): {
   return {
     diagnostic,
     planification,
+    planificateurCours,
     generateurContenu,
+    generateurSchema,
+    generateurGraphique,
+    generateurImage,
+    stockageAssets,
+    concepteurDeCours,
     generateurExercices,
     analyseurErreurs,
     correcteur,
     remediation,
     adaptation,
+  };
+}
+
+/** Dépendances prêtes pour OrchestrateurCycle (mock). */
+export function creerDependancesCycleMock(options: OptionsCapacitesMock = {}) {
+  const capacites = creerCapacitesMock(options);
+  return {
+    generateurContenu: capacites.generateurContenu,
+    concepteurDeCours: capacites.concepteurDeCours,
+    generateurExercices: capacites.generateurExercices,
+    analyseurErreurs: capacites.analyseurErreurs,
+    correcteur: capacites.correcteur,
+    remediation: capacites.remediation,
+    adaptation: capacites.adaptation,
   };
 }

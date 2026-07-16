@@ -12,17 +12,17 @@ interface SelecteurModeleProps {
 }
 
 const styleSelect =
-  "w-full rounded-lg border border-[var(--color-bordure)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-texte)] focus:border-[var(--color-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]";
+  "w-full rounded-lg border border-bordure bg-surface px-4 py-2.5 text-sm text-texte focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 export function SelecteurModele({ selection, onChanger }: SelecteurModeleProps) {
   const fournisseur = trouverFournisseur(selection.fournisseur) ?? FOURNISSEURS[0]!;
   const groupes = grouperModelesParCategorie(fournisseur.modeles);
 
   return (
-    <section className="flex flex-col gap-4 rounded-xl border border-[var(--color-bordure)] bg-[var(--color-surface)] p-4">
+    <section className="flex flex-col gap-4 rounded-xl border border-bordure bg-surface p-4">
       <div className="flex flex-col gap-1">
         <h2 className="text-sm font-medium">Modèle IA</h2>
-        <p className="text-sm text-[var(--color-texte-secondaire)]">
+        <p className="text-sm text-texte-secondaire">
           Choisis le fournisseur et le modèle pour ce parcours.
         </p>
       </div>
@@ -31,7 +31,7 @@ export function SelecteurModele({ selection, onChanger }: SelecteurModeleProps) 
         <div className="flex flex-col gap-2">
           <label
             htmlFor="fournisseur-ia"
-            className="text-sm font-medium text-[var(--color-texte-secondaire)]"
+            className="text-sm font-medium text-texte-secondaire"
           >
             Fournisseur
           </label>
@@ -59,7 +59,7 @@ export function SelecteurModele({ selection, onChanger }: SelecteurModeleProps) 
         <div className="flex flex-col gap-2">
           <label
             htmlFor="modele-ia"
-            className="text-sm font-medium text-[var(--color-texte-secondaire)]"
+            className="text-sm font-medium text-texte-secondaire"
           >
             Modèle
           </label>

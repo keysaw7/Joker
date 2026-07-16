@@ -6,6 +6,7 @@ import type {
   Roadmap,
   SessionPersistee,
 } from "@/core/domain";
+import type { ChampsProfilElevePersistes } from "@/core/domain/profilEleve";
 import type { Persistance } from "@/core/ports";
 import { listerResumesSessions } from "./partage";
 
@@ -14,6 +15,7 @@ interface MagasinPersistance {
   roadmaps: Record<string, Roadmap>;
   objectifs: Record<string, Objectif[]>;
   sessions: Record<string, SessionPersistee>;
+  profilEleve: ChampsProfilElevePersistes | null;
 }
 
 const MAGASIN_VIDE: MagasinPersistance = {
@@ -21,6 +23,7 @@ const MAGASIN_VIDE: MagasinPersistance = {
   roadmaps: {},
   objectifs: {},
   sessions: {},
+  profilEleve: null,
 };
 
 function cheminMagasin(racine: string): string {
@@ -31,7 +34,12 @@ async function chargerMagasin(racine: string): Promise<MagasinPersistance> {
   const fichier = cheminMagasin(racine);
   try {
     const contenu = await readFile(fichier, "utf8");
-    return JSON.parse(contenu) as MagasinPersistance;
+    const magasin = JSON.parse(contenu) as MagasinPersistance;
+    return {
+      ...structuredClone(MAGASIN_VIDE),
+      ...magasin,
+      profilEleve: magasin.profilEleve ?? null,
+    };
   } catch (erreur) {
     if ((erreur as NodeJS.ErrnoException).code === "ENOENT") {
       return structuredClone(MAGASIN_VIDE);
@@ -110,9 +118,41 @@ export function creerPersistanceFichier(
       const magasin = await chargerMagasin(racine);
       return magasin.sessions[objectifId] ?? null;
     },
+    async supprimerSession(objectifId): Promise<void> {
+      await modifierMagasin((magasin) => {
+        const session = magasin.sessions[objectifId];
+        if (!session) {
+          return;
+        }
+
+        delete magasin.sessions[objectifId];
+        delete magasin.profils[objectifId];
+        delete magasin.roadmaps[objectifId];
+
+        const liste = magasin.objectifs[session.objectif.domaineId] ?? [];
+        magasin.objectifs[session.objectif.domaineId] = liste.filter(
+          (objectif) => objectif.id !== objectifId,
+        );
+      });
+    },
     async listerSessions(domaineId) {
       const magasin = await chargerMagasin(racine);
       return listerResumesSessions(Object.values(magasin.sessions), domaineId);
+    },
+    async chargerToutesSessions() {
+      const magasin = await chargerMagasin(racine);
+      return Object.values(magasin.sessions).sort((a, b) =>
+        b.miseAJour.localeCompare(a.miseAJour),
+      );
+    },
+    async chargerProfilEleve() {
+      const magasin = await chargerMagasin(racine);
+      return magasin.profilEleve ?? null;
+    },
+    async sauvegarderProfilEleve(champs): Promise<void> {
+      await modifierMagasin((magasin) => {
+        magasin.profilEleve = champs;
+      });
     },
   };
 }

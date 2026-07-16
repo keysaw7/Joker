@@ -8,6 +8,6 @@ export type PhaseParcours = "diagnostic" | "pret";
 export interface EtatParcours {
   readonly contexte: ContexteApprentissage;
   readonly phase: PhaseParcours;
-  /** Question courante pendant le diagnostic ; null quand prêt. */
-  readonly questionCourante: QuestionDiagnostic | null;
+  /** Questions pré-générées pendant le diagnostic ; vide quand prêt. */
+  readonly questions: readonly QuestionDiagnostic[];
 }

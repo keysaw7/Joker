@@ -6,10 +6,9 @@ import type {
 
 /**
  * Construit une représentation fidèle du niveau réel de l'élève.
- * Les questions sont générées dynamiquement — jamais fixes.
+ * Les questions sont générées en lot au démarrage du diagnostic.
  */
 export interface Diagnostic {
-  genererQuestion(contexte: ContexteApprentissage): Promise<QuestionDiagnostic>;
-  estTermine(contexte: ContexteApprentissage): Promise<boolean>;
+  genererQuestions(contexte: ContexteApprentissage): Promise<readonly QuestionDiagnostic[]>;
   construireProfil(contexte: ContexteApprentissage): Promise<ProfilApprenant>;
 }

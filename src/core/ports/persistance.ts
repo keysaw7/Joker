@@ -1,4 +1,5 @@
 import type {
+  ChampsProfilElevePersistes,
   Objectif,
   ProfilApprenant,
   ResumeSession,
@@ -16,5 +17,9 @@ export interface Persistance {
   chargerObjectifs(domaineId: string): Promise<readonly Objectif[]>;
   sauvegarderSession(session: SessionPersistee): Promise<void>;
   chargerSession(objectifId: string): Promise<SessionPersistee | null>;
+  supprimerSession(objectifId: string): Promise<void>;
   listerSessions(domaineId: string): Promise<readonly ResumeSession[]>;
+  chargerToutesSessions(): Promise<readonly SessionPersistee[]>;
+  chargerProfilEleve(): Promise<ChampsProfilElevePersistes | null>;
+  sauvegarderProfilEleve(champs: ChampsProfilElevePersistes): Promise<void>;
 }

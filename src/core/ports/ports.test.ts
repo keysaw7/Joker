@@ -37,22 +37,19 @@ describe("ports — contrats implémentables hors ligne", () => {
   const source = creerSourceFallback();
   const persistance = creerPersistanceMemoire();
 
-  it("Diagnostic génère des questions puis construit un profil", async () => {
+  it("Diagnostic génère 5 questions puis construit un profil", async () => {
     const contexte = creerContexte();
-    const question = await capacites.diagnostic.genererQuestion(contexte);
-    expect(question.id).toBeTruthy();
-    expect(question.intitule).toBeTruthy();
-
-    const termine = await capacites.diagnostic.estTermine(contexte);
-    expect(termine).toBe(false);
+    const questions = await capacites.diagnostic.genererQuestions(contexte);
+    expect(questions).toHaveLength(5);
+    expect(questions[0]?.id).toBeTruthy();
+    expect(questions[0]?.intitule).toBeTruthy();
 
     const contexteAvecReponses = creerContexte({
-      reponsesDiagnostic: [
-        { questionId: question.id, reponse: "réponse 1" },
-        { questionId: "q-2", reponse: "réponse 2" },
-      ],
+      reponsesDiagnostic: questions.map((question, index) => ({
+        questionId: question.id,
+        reponse: `réponse ${index + 1}`,
+      })),
     });
-    expect(await capacites.diagnostic.estTermine(contexteAvecReponses)).toBe(true);
 
     const profil = await capacites.diagnostic.construireProfil(contexteAvecReponses);
     expect(profil.objectifId).toBe("obj-1");
@@ -63,6 +60,19 @@ describe("ports — contrats implémentables hors ligne", () => {
     expect(roadmap.objectifId).toBe("obj-1");
     expect(roadmap.notions.length).toBeGreaterThanOrEqual(1);
     expect(roadmap.notions[0]?.criteresDeMaitrise.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("ConcepteurDeCours compose un cours riche via le mock", async () => {
+    const contexte = creerContexte();
+    const roadmap = await capacites.planification.genererRoadmap(contexte);
+    const notion = roadmap.notions[0]!;
+
+    const cours = await capacites.concepteurDeCours.composerCours(contexte, notion);
+    expect(cours.blocs.length).toBeGreaterThanOrEqual(5);
+    expect(cours.blocs.some((b) => b.type === "schema")).toBe(true);
+    expect(cours.blocs.some((b) => b.type === "graphique")).toBe(true);
+    expect(cours.blocs.some((b) => b.type === "image")).toBe(true);
+    expect(cours.blocs.some((b) => b.type === "quizFlash")).toBe(true);
   });
 
   it("GenerateurDeContenu produit les trois étapes du Cycle", async () => {
@@ -132,5 +142,16 @@ describe("ports — contrats implémentables hors ligne", () => {
     const objectifs = await persistance.chargerObjectifs("maths");
     expect(objectifs).toHaveLength(1);
     expect(objectifs[0]?.intitule).toBe("Comprendre les dérivées");
+  });
+
+  it("Persistance sauvegarde le profil élève transversal", async () => {
+    const champs = {
+      typeMemoire: "litteraire" as const,
+      pointsForts: ["lecture"],
+      pointsFaibles: [],
+      niveauxParDomaine: {},
+    };
+    await persistance.sauvegarderProfilEleve(champs);
+    expect(await persistance.chargerProfilEleve()).toEqual(champs);
   });
 });

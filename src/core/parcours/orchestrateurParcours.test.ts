@@ -15,72 +15,71 @@ const objectif = {
   creeLe: "2026-01-01T00:00:00.000Z",
 };
 
+function reponsesPourQuestions(
+  questions: readonly { id: string }[],
+): { questionId: string; reponse: string }[] {
+  return questions.map((question, index) => ({
+    questionId: question.id,
+    reponse: `réponse ${index + 1}`,
+  }));
+}
+
 describe("OrchestrateurParcours", () => {
   beforeEach(() => {
     reinitialiserCompteurMock();
   });
 
-  it("demarrer lance le diagnostic avec une question", async () => {
+  it("demarrer lance le diagnostic avec 5 questions pré-générées", async () => {
     const capacites = creerCapacitesMock();
     const parcours = new OrchestrateurParcours(capacites);
 
     const etat = await parcours.demarrer(domaine, objectif);
     expect(etat.phase).toBe("diagnostic");
-    expect(etat.questionCourante).toBeTruthy();
+    expect(etat.questions).toHaveLength(5);
     expect(etat.contexte.reponsesDiagnostic).toHaveLength(0);
     expect(etat.contexte.roadmap).toBeNull();
   });
 
-  it("termine le diagnostic après 2 réponses et produit un contexte prêt", async () => {
+  it("finalise le diagnostic avec 5 réponses et produit un contexte prêt", async () => {
     const capacites = creerCapacitesMock();
     const parcours = new OrchestrateurParcours(capacites);
 
-    let etat = await parcours.demarrer(domaine, objectif);
+    const etatInitial = await parcours.demarrer(domaine, objectif);
+    const etat = await parcours.finaliserDiagnostic(
+      etatInitial,
+      reponsesPourQuestions(etatInitial.questions),
+    );
 
-    etat = await parcours.repondre(etat, {
-      questionId: etat.questionCourante!.id,
-      reponse: "réponse 1",
-    });
-    expect(etat.phase).toBe("diagnostic");
-    expect(etat.questionCourante).toBeTruthy();
-
-    etat = await parcours.repondre(etat, {
-      questionId: etat.questionCourante!.id,
-      reponse: "réponse 2",
-    });
     expect(etat.phase).toBe("pret");
-    expect(etat.questionCourante).toBeNull();
+    expect(etat.questions).toHaveLength(0);
     expect(etat.contexte.roadmap).not.toBeNull();
     expect(etat.contexte.profil.objectifId).toBe("obj-1");
-    expect(etat.contexte.reponsesDiagnostic).toHaveLength(2);
+    expect(etat.contexte.reponsesDiagnostic).toHaveLength(5);
   });
 
-  it("rejette une réponse pour une question différente", async () => {
+  it("rejette des réponses pour des questions différentes", async () => {
     const parcours = new OrchestrateurParcours(creerCapacitesMock());
     const etat = await parcours.demarrer(domaine, objectif);
 
     await expect(
-      parcours.repondre(etat, { questionId: "q-invalide", reponse: "réponse" }),
-    ).rejects.toThrow("La réponse ne correspond pas à la question courante");
+      parcours.finaliserDiagnostic(etat, [
+        { questionId: "q-invalide", reponse: "réponse" },
+      ]),
+    ).rejects.toThrow("Nombre de réponses incorrect");
   });
 
-  it("rejette repondre en phase pret", async () => {
+  it("rejette finaliserDiagnostic en phase pret", async () => {
     const parcours = new OrchestrateurParcours(creerCapacitesMock());
-    let etat = await parcours.demarrer(domaine, objectif);
-
-    etat = await parcours.repondre(etat, {
-      questionId: etat.questionCourante!.id,
-      reponse: "r1",
-    });
-    etat = await parcours.repondre(etat, {
-      questionId: etat.questionCourante!.id,
-      reponse: "r2",
-    });
+    const etatInitial = await parcours.demarrer(domaine, objectif);
+    const etat = await parcours.finaliserDiagnostic(
+      etatInitial,
+      reponsesPourQuestions(etatInitial.questions),
+    );
     expect(etat.phase).toBe("pret");
 
     await expect(
-      parcours.repondre(etat, { questionId: "q-1", reponse: "trop tard" }),
-    ).rejects.toThrow("repondre n'est disponible qu'en phase diagnostic");
+      parcours.finaliserDiagnostic(etat, [{ questionId: "q-1", reponse: "trop tard" }]),
+    ).rejects.toThrow("finaliserDiagnostic n'est disponible qu'en phase diagnostic");
   });
 
   it("persiste objectif, profil et roadmap au passage en phase pret", async () => {
@@ -88,15 +87,11 @@ describe("OrchestrateurParcours", () => {
     const persistance = creerPersistanceMemoire();
     const parcours = new OrchestrateurParcours({ ...capacites, persistance });
 
-    let etat = await parcours.demarrer(domaine, objectif);
-    etat = await parcours.repondre(etat, {
-      questionId: etat.questionCourante!.id,
-      reponse: "r1",
-    });
-    etat = await parcours.repondre(etat, {
-      questionId: etat.questionCourante!.id,
-      reponse: "r2",
-    });
+    const etatInitial = await parcours.demarrer(domaine, objectif);
+    await parcours.finaliserDiagnostic(
+      etatInitial,
+      reponsesPourQuestions(etatInitial.questions),
+    );
 
     const profil = await persistance.chargerProfil("obj-1");
     const roadmap = await persistance.chargerRoadmap("obj-1");
@@ -111,15 +106,11 @@ describe("OrchestrateurParcours", () => {
     const parcours = new OrchestrateurParcours(capacites);
     const cycle = new OrchestrateurCycle(capacites);
 
-    let etatParcours = await parcours.demarrer(domaine, objectif);
-    etatParcours = await parcours.repondre(etatParcours, {
-      questionId: etatParcours.questionCourante!.id,
-      reponse: "r1",
-    });
-    etatParcours = await parcours.repondre(etatParcours, {
-      questionId: etatParcours.questionCourante!.id,
-      reponse: "r2",
-    });
+    const etatInitial = await parcours.demarrer(domaine, objectif);
+    const etatParcours = await parcours.finaliserDiagnostic(
+      etatInitial,
+      reponsesPourQuestions(etatInitial.questions),
+    );
 
     const etatCycle = await cycle.demarrer(etatParcours.contexte);
     expect(etatCycle.etape).toBe("problematique");

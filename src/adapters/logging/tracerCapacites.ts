@@ -1,8 +1,26 @@
-import { creerCapacitesMock } from "@/adapters/ai/mock/capacitesMock";
+import type {
+  Adaptation,
+  AnalyseurErreurs,
+  Correcteur,
+  Diagnostic,
+  GenerateurDeContenu,
+  GenerateurExercices,
+  PlanificationPedagogique,
+  Remediation,
+} from "@/core/ports";
 import { traceIdCourant } from "./contexteTrace";
 import { journalCapacite } from "./journal";
 
-type Capacites = ReturnType<typeof creerCapacitesMock>;
+interface CapacitesTracees {
+  diagnostic: Diagnostic;
+  planification: PlanificationPedagogique;
+  generateurContenu: GenerateurDeContenu;
+  generateurExercices: GenerateurExercices;
+  analyseurErreurs: AnalyseurErreurs;
+  correcteur: Correcteur;
+  remediation: Remediation;
+  adaptation: Adaptation;
+}
 
 async function tracerAppel<T>(
   nom: string,
@@ -22,16 +40,13 @@ async function tracerAppel<T>(
 }
 
 /** Enveloppe les 8 capacités IA pour tracer chaque appel dans le terminal. */
-export function tracerCapacites(capacites: Capacites): Capacites {
+export function tracerCapacites<T extends CapacitesTracees>(capacites: T): T {
   return {
+    ...capacites,
     diagnostic: {
-      genererQuestion: (contexte) =>
-        tracerAppel("diagnostic.genererQuestion", () =>
-          capacites.diagnostic.genererQuestion(contexte),
-        ),
-      estTermine: (contexte) =>
-        tracerAppel("diagnostic.estTermine", () =>
-          capacites.diagnostic.estTermine(contexte),
+      genererQuestions: (contexte) =>
+        tracerAppel("diagnostic.genererQuestions", () =>
+          capacites.diagnostic.genererQuestions(contexte),
         ),
       construireProfil: (contexte) =>
         tracerAppel("diagnostic.construireProfil", () =>

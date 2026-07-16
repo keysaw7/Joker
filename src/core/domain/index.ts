@@ -7,12 +7,28 @@ export type {
   ReponseDiagnostic,
 } from "./profil";
 export type { CritereDeMaitrise, Notion, Roadmap } from "./roadmap";
+export {
+  TYPES_BLOC_EXEMPLE_EXPERT,
+} from "./contenu";
 export type {
+  AssetImage,
   BlocContenu,
+  CasDusage,
   Cours,
+  EtapeCours,
   ExempleExpert,
   FormatContenu,
+  GenreGraphique,
+  IntentionBloc,
+  PlanCours,
+  PointGraphique,
   Problematique,
+  SerieGraphique,
+  SpecGraphique,
+  TypeBlocCours,
+  TypeBlocExempleExpert,
+  TypeIntentionBloc,
+  VarianteEncadre,
 } from "./contenu";
 export type {
   AnalyseReponse,
@@ -31,4 +47,16 @@ export type {
   Recompense,
 } from "./cycle";
 export type { EtatParcours, PhaseParcours } from "./parcours";
+export type {
+  ArchiveCycle,
+  EchangeExercice,
+  EtapeArchivee,
+  NotionArchivee,
+} from "./archive";
 export type { ResumeSession, SessionPersistee, StatutSession } from "./session";
+export type {
+  ChampsProfilElevePersistes,
+  CompetenceDomaine,
+  ProfilEleve,
+  TypeMemoire,
+} from "./profilEleve";

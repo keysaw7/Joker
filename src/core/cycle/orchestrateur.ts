@@ -8,6 +8,7 @@ import type {
 import type {
   Adaptation,
   AnalyseurErreurs,
+  ConcepteurDeCours,
   Correcteur,
   GenerateurDeContenu,
   GenerateurExercices,
@@ -29,6 +30,7 @@ import {
 
 export interface DependancesOrchestrateur {
   generateurContenu: GenerateurDeContenu;
+  concepteurDeCours: ConcepteurDeCours;
   generateurExercices: GenerateurExercices;
   analyseurErreurs: AnalyseurErreurs;
   correcteur: Correcteur;
@@ -76,7 +78,7 @@ export class OrchestrateurCycle {
 
     switch (etat.etape) {
       case "problematique": {
-        const cours = await this.deps.generateurContenu.genererCours(contexte, notion);
+        const cours = await this.deps.concepteurDeCours.composerCours(contexte, notion);
         return { ...etat, etape: "cours", contenu: { type: "cours", cours } };
       }
       case "cours": {
@@ -154,8 +156,21 @@ export class OrchestrateurCycle {
       });
 
       const resultat = await this.deps.adaptation.adapter(contexte);
+      // Fusionne l'adaptation IA sans perdre les notions déjà maîtrisées
+      // (les IDs de notions sont préservés côté adapter / construireRoadmap).
+      const notionsMaitrisees = [
+        ...new Set([
+          ...contexte.profil.notionsMaitrisees,
+          ...resultat.profil.notionsMaitrisees.filter((id) =>
+            resultat.roadmap.notions.some((n) => n.id === id),
+          ),
+        ]),
+      ];
       const contexteAdapte = mettreAJourContexte(contexte, {
-        profil: resultat.profil,
+        profil: {
+          ...resultat.profil,
+          notionsMaitrisees,
+        },
         roadmap: resultat.roadmap,
       });
       await this.persiste(contexteAdapte);

@@ -1,16 +1,14 @@
 import type {
   AnalyseReponse,
-  ContexteApprentissage,
   Correction,
   Cours,
   ExempleExpert,
   Exercice,
-  NiveauGuidage,
-  Notion,
+  IntentionBloc,
+  PlanCours,
   Problematique,
   ProfilApprenant,
   QuestionDiagnostic,
-  ReponseApprenant,
   Roadmap,
 } from "@/core/domain";
 import type {
@@ -20,6 +18,9 @@ import type {
   Diagnostic,
   GenerateurDeContenu,
   GenerateurExercices,
+  GenerateurGraphique,
+  GenerateurSchema,
+  PlanificateurCours,
   PlanificationPedagogique,
   Remediation,
   ResultatAdaptation,
@@ -30,42 +31,64 @@ import { traceIdCourant } from "@/adapters/logging/contexteTrace";
 import { journalIA } from "@/adapters/logging/journal";
 import { construireRoadmapDepuisGeneration } from "./construireRoadmap";
 import {
+  assurerIntentionsExempleExpert,
+  filtrerIntentionsExempleExpert,
+} from "./filtrerIntentionsExempleExpert";
+import {
   normaliserAnalyse,
-  normaliserBloc,
   normaliserExercice,
+  normaliserIntention,
+  normaliserSpecGraphique,
 } from "./normaliser";
 import {
   promptAdaptation,
   promptAnalyserReponse,
   promptConstruireProfil,
   promptCorriger,
-  promptGenererCours,
   promptGenererExempleExpert,
   promptGenererExercice,
+  promptGenererGraphique,
+  promptGenererPlanCours,
   promptGenererProblematique,
   promptGenererRoadmap,
-  promptQuestionDiagnostic,
+  promptGenererSchema,
+  promptQuestionsDiagnostic,
   promptRemediation,
   promptSysteme,
 } from "./prompts";
 import {
   schemaAnalyseReponse,
   schemaCorrectionSansIds,
-  schemaCoursSansNotionId,
   schemaExempleExpertSansNotionId,
   schemaExerciceSansIds,
+  schemaMermaid,
+  schemaPlanCours,
   schemaProblematiqueSansNotionId,
   schemaProfilSansIds,
-  schemaQuestionDiagnostic,
+  schemaQuestionsDiagnostic,
   schemaResultatAdaptationSansIds,
   schemaRoadmapSansIds,
+  schemaSpecGraphique,
 } from "./schemas";
 
-const SEUIL_QUESTIONS_DIAGNOSTIC = 4;
+/** Plan d'exemple expert avant enrichissement média (schéma/graphique/image). */
+export interface PlanExempleExpert {
+  readonly contexte: string;
+  readonly intentions: readonly IntentionBloc[];
+}
 
 function idModele(modele: LanguageModel): string {
   if (typeof modele === "string") return modele;
   return modele.modelId ?? "inconnu";
+}
+
+function estModeleOpenAI(modele: LanguageModel): boolean {
+  if (typeof modele === "string") {
+    return modele.startsWith("gpt-") || modele.startsWith("o");
+  }
+  const id = modele.modelId ?? "";
+  const provider = "provider" in modele ? String(modele.provider ?? "") : "";
+  return provider.includes("openai") || id.startsWith("gpt-") || id.startsWith("o");
 }
 
 async function genererStructure<T>(
@@ -84,12 +107,16 @@ async function genererStructure<T>(
       system: promptSysteme(),
       prompt,
       output: Output.object({ schema }),
-      providerOptions: {
-        openai: {
-          reasoningEffort: "minimal",
-          textVerbosity: "low",
-        },
-      },
+      ...(estModeleOpenAI(modele)
+        ? {
+            providerOptions: {
+              openai: {
+                reasoningEffort: "minimal" as const,
+                textVerbosity: "low" as const,
+              },
+            },
+          }
+        : {}),
     });
 
     const dureeMs = Math.round(performance.now() - debut);
@@ -125,11 +152,60 @@ async function genererStructure<T>(
   }
 }
 
-/** Implémentation des 8 capacités IA via génération structurée. */
+function journaliserRejetIntentionExempleExpert(intention: IntentionBloc): void {
+  console.warn(
+    `[exempleExpert] Intention rejetée (type "${intention.type}" hors contrat)`,
+  );
+}
+
+function intentionsExempleExpertApresFiltrage(
+  intentions: readonly IntentionBloc[],
+  notion: import("@/core/domain").Notion,
+): IntentionBloc[] {
+  return assurerIntentionsExempleExpert(intentions, notion, {
+    onRejet: journaliserRejetIntentionExempleExpert,
+  });
+}
+
+function intentionsSansMedia(
+  intentions: readonly IntentionBloc[],
+): ExempleExpert["demonstration"] {
+  return intentions
+    .filter(
+      (intention) =>
+        intention.type !== "schema" &&
+        intention.type !== "graphique" &&
+        intention.type !== "image",
+    )
+    .map((intention) => {
+      switch (intention.type) {
+        case "texte":
+        case "encadre":
+        case "analogie":
+        case "comparaison":
+        case "tableau":
+        case "etapes":
+        case "quizFlash":
+          return intention;
+        default:
+          return { type: "texte" as const, markdown: "_Bloc média non enrichi._" };
+      }
+    });
+}
+
+/** Implémentation des capacités IA texte via génération structurée. */
 export function creerCapacitesIA(modele: LanguageModel): {
   diagnostic: Diagnostic;
   planification: PlanificationPedagogique;
+  planificateurCours: PlanificateurCours;
+  /** Plan brut d'exemple expert — à enrichir via ConcepteurDeCours. */
+  planifierExempleExpert: (
+    contexte: import("@/core/domain").ContexteApprentissage,
+    notion: import("@/core/domain").Notion,
+  ) => Promise<PlanExempleExpert>;
   generateurContenu: GenerateurDeContenu;
+  generateurSchema: GenerateurSchema;
+  generateurGraphique: GenerateurGraphique;
   generateurExercices: GenerateurExercices;
   analyseurErreurs: AnalyseurErreurs;
   correcteur: Correcteur;
@@ -137,18 +213,17 @@ export function creerCapacitesIA(modele: LanguageModel): {
   adaptation: Adaptation;
 } {
   const diagnostic: Diagnostic = {
-    async genererQuestion(contexte): Promise<QuestionDiagnostic> {
-      const generee = await genererStructure(
+    async genererQuestions(contexte): Promise<QuestionDiagnostic[]> {
+      const generees = await genererStructure(
         modele,
-        schemaQuestionDiagnostic,
-        promptQuestionDiagnostic(contexte),
-        "questionDiagnostic",
+        schemaQuestionsDiagnostic,
+        promptQuestionsDiagnostic(contexte),
+        "questionsDiagnostic",
       );
-      return { id: crypto.randomUUID(), intitule: generee.intitule };
-    },
-
-    async estTermine(contexte): Promise<boolean> {
-      return contexte.reponsesDiagnostic.length >= SEUIL_QUESTIONS_DIAGNOSTIC;
+      return generees.questions.map((question) => ({
+        id: crypto.randomUUID(),
+        intitule: question.intitule,
+      }));
     },
 
     async construireProfil(contexte): Promise<ProfilApprenant> {
@@ -160,7 +235,14 @@ export function creerCapacitesIA(modele: LanguageModel): {
       );
       return {
         objectifId: contexte.objectif.id,
-        ...genere,
+        acquis: genere.acquis,
+        competences: genere.competences,
+        lacunes: genere.lacunes,
+        erreursFrequentes: genere.erreursFrequentes,
+        preferencesPedagogiques: genere.preferencesPedagogiques,
+        // Source de vérité du parcours : toujours vide au diagnostic.
+        // Les acquis antérieurs vont dans acquis/compétences, pas ici.
+        notionsMaitrisees: [],
         miseAJour: new Date().toISOString(),
       };
     },
@@ -182,6 +264,62 @@ export function creerCapacitesIA(modele: LanguageModel): {
     },
   };
 
+  const planificateurCours: PlanificateurCours = {
+    async genererPlanCours(contexte, notion): Promise<PlanCours> {
+      const genere = await genererStructure(
+        modele,
+        schemaPlanCours,
+        promptGenererPlanCours(contexte, notion),
+        "planCours",
+      );
+      return {
+        titre: genere.titre,
+        intentions: genere.intentions.map(normaliserIntention),
+      };
+    },
+  };
+
+  const generateurSchema: GenerateurSchema = {
+    async genererSchema({ brief, contexte }) {
+      const genere = await genererStructure(
+        modele,
+        schemaMermaid,
+        promptGenererSchema(brief, contexte),
+        "schema",
+      );
+      return { mermaid: genere.mermaid };
+    },
+  };
+
+  const generateurGraphique: GenerateurGraphique = {
+    async genererGraphique({ brief, contexte }) {
+      const genere = await genererStructure(
+        modele,
+        schemaSpecGraphique,
+        promptGenererGraphique(brief, contexte),
+        "graphique",
+      );
+      return normaliserSpecGraphique(genere);
+    },
+  };
+
+  async function planifierExempleExpert(
+    contexte: import("@/core/domain").ContexteApprentissage,
+    notion: import("@/core/domain").Notion,
+  ): Promise<PlanExempleExpert> {
+    const genere = await genererStructure(
+      modele,
+      schemaExempleExpertSansNotionId,
+      promptGenererExempleExpert(contexte, notion),
+      "exempleExpert",
+    );
+    const normalisees = genere.intentions.map(normaliserIntention);
+    return {
+      contexte: genere.contexte,
+      intentions: intentionsExempleExpertApresFiltrage(normalisees, notion),
+    };
+  }
+
   const generateurContenu: GenerateurDeContenu = {
     async genererProblematique(contexte, notion): Promise<Problematique> {
       const generee = await genererStructure(
@@ -193,31 +331,34 @@ export function creerCapacitesIA(modele: LanguageModel): {
       return { notionId: notion.id, ...generee };
     },
 
+    /**
+     * Fallback sans enrichissement média.
+     * Le moteur doit préférer `concepteurDeCours.composerCours`.
+     */
     async genererCours(contexte, notion): Promise<Cours> {
-      const genere = await genererStructure(
-        modele,
-        schemaCoursSansNotionId,
-        promptGenererCours(contexte, notion),
-        "cours",
-      );
+      const plan = await planificateurCours.genererPlanCours(contexte, notion);
       return {
         notionId: notion.id,
-        titre: genere.titre,
-        blocs: genere.blocs.map(normaliserBloc),
+        titre: plan.titre,
+        blocs: intentionsSansMedia(plan.intentions),
       };
     },
 
+    /**
+     * Fallback sans enrichissement média.
+     * Le moteur doit préférer planifierExempleExpert + enrichirIntentions.
+     */
     async genererExempleExpert(contexte, notion): Promise<ExempleExpert> {
-      const genere = await genererStructure(
-        modele,
-        schemaExempleExpertSansNotionId,
-        promptGenererExempleExpert(contexte, notion),
-        "exempleExpert",
-      );
+      const plan = await planifierExempleExpert(contexte, notion);
+      const filtrees = filtrerIntentionsExempleExpert(plan.intentions, {
+        onRejet: journaliserRejetIntentionExempleExpert,
+      });
       return {
         notionId: notion.id,
-        contexte: genere.contexte,
-        demonstration: genere.demonstration.map(normaliserBloc),
+        contexte: plan.contexte,
+        demonstration: intentionsSansMedia(
+          filtrees.length >= 1 ? filtrees : plan.intentions,
+        ),
       };
     },
   };
@@ -294,18 +435,32 @@ export function creerCapacitesIA(modele: LanguageModel): {
       );
 
       const version = (contexte.roadmap?.version ?? 0) + 1;
+      const roadmap = construireRoadmapDepuisGeneration(
+        contexte.objectif.id,
+        version,
+        genere.roadmap,
+        contexte.roadmap,
+      );
+
+      // Source de vérité : les IDs déjà maîtrisés côté orchestrateur.
+      // On ignore les notionsMaitrisees renvoyées par le LLM (titres ou IDs inventés).
+      const idsValides = new Set(roadmap.notions.map((n) => n.id));
+      const notionsMaitrisees = contexte.profil.notionsMaitrisees.filter((id) =>
+        idsValides.has(id),
+      );
 
       return {
         profil: {
           objectifId: contexte.objectif.id,
-          ...genere.profil,
+          acquis: genere.profil.acquis,
+          competences: genere.profil.competences,
+          lacunes: genere.profil.lacunes,
+          erreursFrequentes: genere.profil.erreursFrequentes,
+          preferencesPedagogiques: genere.profil.preferencesPedagogiques,
+          notionsMaitrisees,
           miseAJour: new Date().toISOString(),
         },
-        roadmap: construireRoadmapDepuisGeneration(
-          contexte.objectif.id,
-          version,
-          genere.roadmap,
-        ),
+        roadmap,
       };
     },
   };
@@ -313,7 +468,11 @@ export function creerCapacitesIA(modele: LanguageModel): {
   return {
     diagnostic,
     planification,
+    planificateurCours,
+    planifierExempleExpert,
     generateurContenu,
+    generateurSchema,
+    generateurGraphique,
     generateurExercices,
     analyseurErreurs,
     correcteur,

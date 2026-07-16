@@ -9,3 +9,7 @@ next-env.d.ts
 .DS_Store
 /coverage
 /.data
+
+# Supabase CLI (local)
+supabase/.branches
+supabase/.temp

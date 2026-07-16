@@ -1,26 +1,39 @@
 import type { EtatCycle, EtatParcours, SessionPersistee } from "@/core/domain";
-import { memoire } from "@/app/_serveur/moteur";
+import { persistanceCourante } from "@/app/_serveur/moteur";
+import { fusionnerArchive } from "@/app/_serveur/archive";
 
 export async function enregistrerSnapshotParcours(etat: EtatParcours): Promise<void> {
+  const persistance = await persistanceCourante();
+  const existante = await persistance.chargerSession(etat.contexte.objectif.id);
+
   const session: SessionPersistee = {
     objectif: etat.contexte.objectif,
     statut: etat.phase === "pret" ? "generation" : "diagnostic",
     miseAJour: new Date().toISOString(),
     etatParcours: etat,
     etatCycle: null,
+    archive: existante?.archive ?? null,
   };
 
-  await memoire().sauvegarderSession(session);
+  await persistance.sauvegarderSession(session);
 }
 
-export async function enregistrerSnapshotCycle(etat: EtatCycle): Promise<void> {
+export async function enregistrerSnapshotCycle(
+  etat: EtatCycle,
+  reponseExercice?: { enonce: string; reponse: string },
+): Promise<void> {
+  const persistance = await persistanceCourante();
+  const existante = await persistance.chargerSession(etat.contexte.objectif.id);
+  const archive = fusionnerArchive(existante?.archive ?? null, etat, reponseExercice);
+
   const session: SessionPersistee = {
     objectif: etat.contexte.objectif,
     statut: etat.termine ? "termine" : "cycle",
     miseAJour: new Date().toISOString(),
     etatParcours: null,
     etatCycle: etat,
+    archive,
   };
 
-  await memoire().sauvegarderSession(session);
+  await persistance.sauvegarderSession(session);
 }

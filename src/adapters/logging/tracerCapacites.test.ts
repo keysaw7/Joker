@@ -32,13 +32,11 @@ describe("tracerCapacites", () => {
     const brutes = creerCapacitesMock();
     const tracees = tracerCapacites(brutes);
 
-    const questionBrute = await brutes.diagnostic.genererQuestion(contexteMinimal);
-    const questionTracee = await tracees.diagnostic.genererQuestion(contexteMinimal);
+    const questionsBrutes = await brutes.diagnostic.genererQuestions(contexteMinimal);
+    const questionsTracees = await tracees.diagnostic.genererQuestions(contexteMinimal);
 
-    expect(questionTracee.intitule).toBe(questionBrute.intitule);
-    expect(await tracees.diagnostic.estTermine(contexteMinimal)).toBe(
-      await brutes.diagnostic.estTermine(contexteMinimal),
-    );
+    expect(questionsTracees).toHaveLength(questionsBrutes.length);
+    expect(questionsTracees[0]?.intitule).toBe(questionsBrutes[0]?.intitule);
   });
 
   it("relance les erreurs sans les modifier", async () => {
