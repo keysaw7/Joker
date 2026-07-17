@@ -1,14 +1,27 @@
-import type { Domaine, Lacune, SessionPersistee } from "@/core/domain";
+import type { Domaine, Lacune, ModeleApprenant, SessionPersistee } from "@/core/domain";
 import type {
   ChampsProfilElevePersistes,
   CompetenceDomaine,
   ProfilEleve,
 } from "@/core/domain/profilEleve";
 import { champsProfilEleveInitiaux } from "@/core/domain/profilEleve";
+import {
+  faiblessesProbablesDepuisModele,
+  forcesProbablesDepuisModele,
+  formatsEfficacesDepuisModele,
+} from "@/core/modele-apprentissage";
 
 function profilSession(session: SessionPersistee) {
   return (
     session.etatCycle?.contexte.profil ?? session.etatParcours?.contexte.profil ?? null
+  );
+}
+
+function modeleSession(session: SessionPersistee): ModeleApprenant | null {
+  return (
+    session.etatCycle?.contexte.modeleApprenant ??
+    session.etatParcours?.contexte.modeleApprenant ??
+    null
   );
 }
 
@@ -50,6 +63,8 @@ export function construireProfilEleve(
   }
 
   const preferencesPedagogiques: string[] = [];
+  const forcesProbables: string[] = [];
+  const faiblessesProbables: string[] = [];
   let miseAJour = "1970-01-01T00:00:00.000Z";
 
   for (const session of sessions) {
@@ -60,22 +75,33 @@ export function construireProfilEleve(
     if (profil) {
       preferencesPedagogiques.push(...profil.preferencesPedagogiques);
     }
+    const modele = modeleSession(session);
+    if (modele) {
+      forcesProbables.push(...forcesProbablesDepuisModele(modele));
+      faiblessesProbables.push(...faiblessesProbablesDepuisModele(modele));
+      preferencesPedagogiques.push(...formatsEfficacesDepuisModele(modele));
+    }
   }
 
   const competencesParDomaine: CompetenceDomaine[] = domaines.map((domaine) => {
     const sessionsDomaine = sessionsParDomaine.get(domaine.id) ?? [];
     const lacunes: Lacune[] = [];
     const notionsMaitrisees = new Set<string>();
+    const pointsFortsDomaine: string[] = [];
     let notionsTotal = 0;
 
     for (const session of sessionsDomaine) {
       const profil = profilSession(session);
       const roadmap = roadmapSession(session);
+      const modele = modeleSession(session);
       if (profil) {
         for (const notion of profil.notionsMaitrisees) {
           notionsMaitrisees.add(notion);
         }
         lacunes.push(...profil.lacunes);
+      }
+      if (modele) {
+        pointsFortsDomaine.push(...forcesProbablesDepuisModele(modele, 3));
       }
       if (roadmap) {
         notionsTotal = Math.max(notionsTotal, roadmap.notions.length);
@@ -89,16 +115,17 @@ export function construireProfilEleve(
       notionsMaitrisees: notionsMaitrisees.size,
       notionsTotal,
       lacunes: fusionnerLacunes(lacunes),
-      pointsForts: [],
+      pointsForts: valeursUniques(pointsFortsDomaine),
     };
   });
 
   return {
     utilisateurId,
     email,
+    // typeMemoire reste un champ legacy de projection UI ; non alimenté par le Learning Model.
     typeMemoire: champs.typeMemoire,
-    pointsForts: [...champs.pointsForts],
-    pointsFaibles: [...champs.pointsFaibles],
+    pointsForts: valeursUniques([...champs.pointsForts, ...forcesProbables]),
+    pointsFaibles: valeursUniques([...champs.pointsFaibles, ...faiblessesProbables]),
     preferencesPedagogiques: valeursUniques(preferencesPedagogiques),
     competencesParDomaine,
     miseAJour,

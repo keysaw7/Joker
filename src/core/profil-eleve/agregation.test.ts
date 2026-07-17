@@ -59,6 +59,8 @@ const sessionJaponaisCycle: SessionPersistee = {
       notionCouranteId: "n-1",
       reponsesDiagnostic: [],
       estimationNiveau: null,
+    modeleApprenant: null,
+    grapheCompetences: null,
     },
     etape: "cours",
     contenu: { type: "cours", cours: { notionId: "n-1", titre: "Salutations", blocs: [] } },
@@ -109,6 +111,8 @@ const sessionJaponais: SessionPersistee = {
       notionCouranteId: null,
       reponsesDiagnostic: [],
       estimationNiveau: null,
+    modeleApprenant: null,
+    grapheCompetences: null,
     },
     phase: "diagnostic",
     questionCourante: {

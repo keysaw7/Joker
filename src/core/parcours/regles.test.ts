@@ -26,6 +26,8 @@ describe("regles parcours — logique pure", () => {
     expect(contexte.notionCouranteId).toBeNull();
     expect(contexte.reponsesDiagnostic).toEqual([]);
     expect(contexte.profil.objectifId).toBe("obj-1");
+    expect(contexte.modeleApprenant?.eleveId).toBe("obj-1");
+    expect(contexte.grapheCompetences).toBeNull();
   });
 
   it("ajouterReponse est immutable", () => {

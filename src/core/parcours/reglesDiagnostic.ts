@@ -138,16 +138,26 @@ export function mettreAJourEstimation(
   };
 }
 
+/** Seuil d'incertitude globale sous lequel le diagnostic peut s'arrêter. */
+export const SEUIL_INCERTITUDE_DIAGNOSTIC = 0.35;
+
 export function diagnosticEstTermine(
   nbPosees: number,
   estimation: EstimationNiveau,
   historique: readonly EntreeHistoriqueDiagnostic[],
+  incertitudeGlobale?: number,
 ): boolean {
   if (nbPosees >= MAX_QUESTIONS) {
     return true;
   }
   if (nbPosees < MIN_QUESTIONS) {
     return false;
+  }
+  if (
+    incertitudeGlobale !== undefined &&
+    incertitudeGlobale <= SEUIL_INCERTITUDE_DIAGNOSTIC
+  ) {
+    return true;
   }
   if (estimation.confiance >= SEUIL_CONFIANCE) {
     return true;

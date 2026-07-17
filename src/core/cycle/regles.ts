@@ -2,17 +2,63 @@ import type {
   AnalyseReponse,
   ContexteApprentissage,
   EtatExercices,
+  FormatExercice,
   Lacune,
+  ModeleApprenant,
   NiveauGuidage,
   Notion,
   ProfilApprenant,
   Roadmap,
 } from "@/core/domain";
+import { moyenneCroyance } from "@/core/domain";
 
 const ORDRE_GUIDAGE: readonly NiveauGuidage[] = ["fort", "modere", "autonome"];
 
 /** Guidage du premier exercice d'une notion (étayage maximal). */
 export const GUIDAGE_INITIAL: NiveauGuidage = "fort";
+
+const FORMATS_PAR_GUIDAGE: Record<NiveauGuidage, readonly FormatExercice[]> = {
+  fort: ["qcm", "trous"],
+  modere: ["trous", "appariement"],
+  autonome: ["production_libre", "appariement"],
+};
+
+const FORMATS_REMEDIATION: readonly FormatExercice[] = ["qcm", "trous"];
+
+function meilleurFormatParmi(
+  candidats: readonly FormatExercice[],
+  modele?: ModeleApprenant | null,
+): FormatExercice {
+  if (!modele || candidats.length === 0) {
+    return candidats[0] ?? "qcm";
+  }
+
+  let meilleur = candidats[0]!;
+  let meilleurScore = -1;
+  for (const format of candidats) {
+    const croyance = modele.preferences.efficaciteParFormat[format];
+    const score = croyance ? moyenneCroyance(croyance) : 0.5;
+    if (score > meilleurScore) {
+      meilleurScore = score;
+      meilleur = format;
+    }
+  }
+  return meilleur;
+}
+
+/**
+ * Choisit le format d'exercice selon le guidage, le LM et le contexte de remédiation.
+ */
+export function choisirFormatExercice(
+  guidage: NiveauGuidage,
+  modele?: ModeleApprenant | null,
+  options?: { readonly remediation?: boolean },
+): FormatExercice {
+  if (options?.remediation) {
+    return meilleurFormatParmi(FORMATS_REMEDIATION, modele);
+  }
+  return meilleurFormatParmi(FORMATS_PAR_GUIDAGE[guidage], modele);
+}
 
 /** Vérifie que tous les prérequis d'une notion sont maîtrisés. */
 export function prerequisSatisfaits(

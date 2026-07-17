@@ -6,7 +6,9 @@ import type {
   Cours,
   ExempleExpert,
   Exercice,
+  FormatExercice,
   IntentionBloc,
+  NiveauGuidage,
   Notion,
   PlanCours,
   Problematique,
@@ -38,6 +40,61 @@ let compteurId = 0;
 function prochainId(prefixe: string): string {
   compteurId += 1;
   return `${prefixe}-${compteurId}`;
+}
+
+function exerciceMock(
+  notion: Notion,
+  guidage: NiveauGuidage,
+  format: FormatExercice,
+  extras?: { readonly cibleLacune?: string; readonly prefixeId?: string },
+): Exercice {
+  const id = prochainId(extras?.prefixeId ?? "exo");
+  const base = {
+    id,
+    notionId: notion.id,
+    guidage,
+    consigne: `Consigne mock (${format}, ${guidage})`,
+    ...(extras?.cibleLacune != null ? { cibleLacune: extras.cibleLacune } : {}),
+  };
+
+  switch (format) {
+    case "qcm":
+      return {
+        ...base,
+        format: "qcm",
+        question: "Quelle est la bonne réponse ?",
+        options: ["Bonne réponse", "Distracteur A", "Distracteur B"],
+        bonneReponse: 0,
+      };
+    case "trous":
+      return {
+        ...base,
+        format: "trous",
+        phrases: [
+          {
+            id: `${id}-p1`,
+            texteAvecTrous: "Bonjour se dit ___ .",
+            solutions: ["konnichiwa", "こんにちは"],
+          },
+        ],
+      };
+    case "appariement":
+      return {
+        ...base,
+        format: "appariement",
+        paires: [
+          { id: `${id}-a1`, gauche: "bonjour", droite: "こんにちは" },
+          { id: `${id}-a2`, gauche: "merci", droite: "ありがとう" },
+        ],
+      };
+    case "production_libre":
+      return {
+        ...base,
+        format: "production_libre",
+        enonce: `Exercice mock (${guidage})`,
+        criteres: ["Réponse claire"],
+      };
+  }
 }
 
 /** Réinitialise le compteur d'identifiants — utile entre les tests. */
@@ -330,13 +387,8 @@ export function creerCapacitesMock(options: OptionsCapacitesMock = {}): {
   };
 
   const generateurExercices: GenerateurExercices = {
-    async genererExercice(_contexte, notion, guidage): Promise<Exercice> {
-      return {
-        id: prochainId("exo"),
-        notionId: notion.id,
-        enonce: `Exercice mock (${guidage})`,
-        guidage,
-      };
+    async genererExercice(_contexte, notion, guidage, format): Promise<Exercice> {
+      return exerciceMock(notion, guidage, format);
     },
   };
 
@@ -350,24 +402,25 @@ export function creerCapacitesMock(options: OptionsCapacitesMock = {}): {
   };
 
   const correcteur: Correcteur = {
-    async corriger(_contexte, exercice, analyse): Promise<Correction> {
+    async corriger(_contexte, exercice, analyse, items = []): Promise<Correction> {
       return {
         exerciceId: exercice.id,
         analyse,
-        explicationPersonnalisee: "Explication personnalisée (mock)",
+        resume: "Explication personnalisée (mock)",
+        items,
+        ...(analyse.correcte
+          ? { pointsForts: ["Bonne maîtrise du point travaillé"] }
+          : { aRetravailler: ["Revois ce point avant de continuer"] }),
       };
     },
   };
 
   const remediation: Remediation = {
-    async genererExerciceCible(_contexte, notion, lacune): Promise<Exercice> {
-      return {
-        id: prochainId("rem"),
-        notionId: notion.id,
-        enonce: `Exercice de remédiation : ${lacune}`,
-        guidage: "fort",
+    async genererExerciceCible(_contexte, notion, lacune, format): Promise<Exercice> {
+      return exerciceMock(notion, "fort", format, {
         cibleLacune: lacune,
-      };
+        prefixeId: "rem",
+      });
     },
   };
 

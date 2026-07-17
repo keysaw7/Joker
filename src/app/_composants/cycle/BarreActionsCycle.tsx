@@ -14,7 +14,7 @@ import {
 } from "@/app/_experience/navigation";
 import type { PhaseAttente } from "@/app/_composants/attente/phasesAttente";
 import { phasePourAvancerCycle } from "@/app/_composants/attente/phasesAttente";
-import type { EtapeCycle } from "@/core/domain";
+import type { EtapeCycle, ReponseApprenant } from "@/core/domain";
 import { Bouton } from "../Bouton";
 
 interface BarreActionsCycleProps {
@@ -120,14 +120,14 @@ export function useActionsExercice({
   const router = useRouter();
   const [enCours, startTransition] = useTransition();
 
-  function repondre(texte: string) {
+  function repondre(reponse: ReponseApprenant) {
     if (!estCourante) {
       return;
     }
     onPhaseAttente?.("correctionExercice");
     startTransition(async () => {
       try {
-        const resultat = await repondreExercice(objectifId, texte);
+        const resultat = await repondreExercice(objectifId, reponse);
         router.push(urlEtape(objectifId, resultat.notionId, resultat.etape));
         router.refresh();
       } finally {

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { AnalyseReponse, EtatExercices, ProfilApprenant, Roadmap } from "@/core/domain";
+import { croyanceInitiale, modeleApprenantInitial } from "@/core/domain";
 import {
+  choisirFormatExercice,
   creerRecompense,
   enrichirProfil,
   extraireLacune,
@@ -62,7 +64,11 @@ function etatExercices(
     exerciceCourant: {
       id: "exo-1",
       notionId: "n1",
-      enonce: "test",
+      format: "qcm",
+      consigne: "test",
+      question: "Quelle option ?",
+      options: ["A", "B"],
+      bonneReponse: 0,
       guidage: "fort",
     },
     guidageActuel: "fort",
@@ -167,6 +173,8 @@ describe("regles — logique pure du cycle", () => {
       notionCouranteId: null,
       reponsesDiagnostic: [],
       estimationNiveau: null,
+    modeleApprenant: null,
+    grapheCompetences: null,
     };
     const misAJour = mettreAJourContexte(ctx, { notionCouranteId: "n1" });
     expect(misAJour.notionCouranteId).toBe("n1");
@@ -210,5 +218,29 @@ describe("regles — logique pure du cycle", () => {
     const marque = marquerNotionMaitrisee(avecLacune, notion);
     expect(marque.notionsMaitrisees).toEqual(["n1"]);
     expect(marque.lacunes).toHaveLength(0);
+  });
+
+  it("choisirFormatExercice suit le mapping guidage par défaut", () => {
+    expect(choisirFormatExercice("fort")).toBe("qcm");
+    expect(choisirFormatExercice("modere")).toBe("trous");
+    expect(choisirFormatExercice("autonome")).toBe("production_libre");
+    expect(choisirFormatExercice("autonome", null, { remediation: true })).toBe(
+      "qcm",
+    );
+  });
+
+  it("choisirFormatExercice biaise selon efficaciteParFormat du LM", () => {
+    const modele = modeleApprenantInitial("obj-1");
+    const modeleBiaise = {
+      ...modele,
+      preferences: {
+        ...modele.preferences,
+        efficaciteParFormat: {
+          trous: { ...croyanceInitiale("trous"), alpha: 8, beta: 2 },
+          qcm: { ...croyanceInitiale("qcm"), alpha: 2, beta: 8 },
+        },
+      },
+    };
+    expect(choisirFormatExercice("fort", modeleBiaise)).toBe("trous");
   });
 });

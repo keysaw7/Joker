@@ -192,15 +192,23 @@ Le but : montrer la connaissance **en contexte**.
 
 L'autre pilier du moteur. Entièrement **adaptatifs**, avec une progression du **fort guidage** vers l'**autonomie**.
 
-Après chaque réponse, le moteur analyse :
+Chaque exercice a un **format typé** (un seul format par exercice) :
 
-- si la réponse est correcte,
-- pourquoi elle est correcte ou incorrecte,
-- quelle connaissance manque,
-- quelle confusion est présente,
-- quelle erreur cognitive est responsable.
+| Format | Usage typique | Évaluation |
+|---|---|---|
+| `qcm` | Guidage fort | Déterministe |
+| `trous` | Guidage fort / modéré | Déterministe |
+| `appariement` | Guidage modéré | Déterministe |
+| `production_libre` | Guidage autonome | Analyse IA |
 
-Il produit ensuite une **correction personnalisée**, puis génère un **nouvel exercice ciblant précisément le point bloquant**.
+Le format est choisi selon le guidage, le learning model (`efficaciteParFormat`) et le contexte de remédiation.
+
+Après chaque réponse :
+
+- les formats fermés sont **notés en code** (items corrects / incorrects) ;
+- la production libre passe par l'analyseur IA ;
+- le correcteur IA produit un **feedback structuré** (`resume`, `pointsForts`, `aRetravailler`, détail par item) ;
+- le moteur génère un **nouvel exercice ciblant le point bloquant** si besoin.
 
 Le cycle continue jusqu'à **disparition de la difficulté**.
 
@@ -312,10 +320,25 @@ Le moteur se décompose en composants à responsabilité unique. Chacun communiq
 | Composant | Responsabilité |
 |---|---|
 | **Modèle du domaine** | Entités métier : Domaine, Objectif, Profil, Roadmap, Notion, Cycle, Exercice… |
+| **Learning Model** | Source de vérité probabiliste de l'élève (observations → croyances → recommandations) |
 | **Orchestrateur du Cycle** | Pilote la séquence problématique → cours → expert → exercices → récompense |
-| **Gestionnaire de profil** | Maintient et enrichit l'état vivant de l'apprenant |
+| **Gestionnaire de profil** | Projection UI/LLM dérivée du Learning Model (jamais source de vérité seule) |
 | **Gestionnaire de roadmap** | Crée, versionne et adapte la feuille de route |
 | **Contexte d'apprentissage** | Agrège les informations accumulées pour la génération just-in-time |
+
+### Learning Model (jumeau d'apprentissage)
+
+Le cœur pédagogique maintient un **modèle vivant** de chaque élève — pas des notes, pas des étiquettes fixes.
+
+Principes :
+
+- Chaque interaction produit une **`Observation`** append-only.
+- Un **`MoteurInference`** (V0 : Beta-Bernoulli) met à jour des **croyances** probabilistes par compétence / notion.
+- Un **`GrapheCompetences`** ancre les dépendances et stabilise les IDs (via `RegistreCompetences`).
+- **`ProfilApprenant` / `ProfilEleve`** sont des **projections** du modèle, consommées par l'UI et les prompts.
+- Le diagnostic n'est qu'une phase de réduction d'incertitude ; chaque exercice continue d'affiner le modèle.
+
+Modules (`src/core/modele-apprentissage/`) : Observation, Inference, Graphe, Incertitude, Recommandation, Prediction — chacun derrière un port interchangeable (BKT, IRT, RL plus tard).
 
 ### Ports (interfaces vers l'extérieur)
 

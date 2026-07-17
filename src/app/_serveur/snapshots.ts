@@ -1,6 +1,9 @@
 import type { EtatCycle, EtatParcours, SessionPersistee } from "@/core/domain";
+import {
+  fusionnerArchive,
+  type DonneesReponseExerciceArchive,
+} from "@/app/_serveur/archive";
 import { persistanceCourante } from "@/app/_serveur/moteur";
-import { fusionnerArchive } from "@/app/_serveur/archive";
 
 export async function enregistrerSnapshotParcours(etat: EtatParcours): Promise<void> {
   const persistance = await persistanceCourante();
@@ -20,7 +23,7 @@ export async function enregistrerSnapshotParcours(etat: EtatParcours): Promise<v
 
 export async function enregistrerSnapshotCycle(
   etat: EtatCycle,
-  reponseExercice?: { enonce: string; reponse: string },
+  reponseExercice?: DonneesReponseExerciceArchive,
 ): Promise<void> {
   const persistance = await persistanceCourante();
   const existante = await persistance.chargerSession(etat.contexte.objectif.id);

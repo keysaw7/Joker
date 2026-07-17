@@ -39,6 +39,8 @@ function etatCycle(overrides: Partial<EtatCycle> = {}): EtatCycle {
       notionCouranteId: "n1",
       reponsesDiagnostic: [],
       estimationNiveau: null,
+    modeleApprenant: null,
+    grapheCompetences: null,
     },
     etape: "problematique",
     contenu: {

@@ -36,11 +36,21 @@ export type {
   TypeIntentionBloc,
   VarianteEncadre,
 } from "./contenu";
+export {
+  FORMATS_EXERCICE_FERMES,
+  formatExerciceEstFerme,
+  resumeTexteExercice,
+  resumeTexteReponse,
+} from "./exercice";
 export type {
   AnalyseReponse,
   Correction,
   Exercice,
+  FeedbackItem,
+  FormatExercice,
   NiveauGuidage,
+  PaireAppariement,
+  PhraseATrous,
   ReponseApprenant,
 } from "./exercice";
 export type { ContexteApprentissage } from "./contexte";
@@ -66,3 +76,35 @@ export type {
   ProfilEleve,
   TypeMemoire,
 } from "./profilEleve";
+export type {
+  ActionPedagogique,
+  ContraintesRecommandation,
+  Croyance,
+  DistributionScalaire,
+  EtatGrapheCompetences,
+  FrequenceErreur,
+  MetaObservation,
+  ModeleApprenant,
+  NoeudConnaissance,
+  Observation,
+  ParametresAcquisition,
+  PreferencesObservees,
+  PredictionTrajectory,
+  PreuveObservation,
+  PriorsModele,
+  RelationConnaissance,
+  SourceObservation,
+  TypeNoeud,
+  TypeObservation,
+  TypeRelation,
+} from "./modele-apprentissage";
+export {
+  PRIOR_ALPHA,
+  PRIOR_BETA,
+  croyanceInitiale,
+  distributionScalaireInitiale,
+  etatGrapheVide,
+  modeleApprenantInitial,
+  moyenneCroyance,
+  varianceCroyance,
+} from "./modele-apprentissage";

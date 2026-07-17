@@ -5,7 +5,12 @@ import {
 } from "@/adapters/ai/mock/capacitesMock";
 import { creerPersistanceMemoire } from "@/adapters/persistence/memoire";
 import { OrchestrateurCycle } from "@/core/cycle/orchestrateur";
-import type { ContexteApprentissage, Roadmap } from "@/core/domain";
+import type {
+  ContexteApprentissage,
+  Exercice,
+  ReponseApprenant,
+  Roadmap,
+} from "@/core/domain";
 
 function creerRoadmap(notions: Roadmap["notions"]): Roadmap {
   return { objectifId: "obj-1", version: 1, notions };
@@ -38,8 +43,48 @@ function creerContexte(
     notionCouranteId: null,
     reponsesDiagnostic: [],
     estimationNiveau: null,
+    modeleApprenant: null,
+    grapheCompetences: null,
     ...overrides,
   };
+}
+
+function reponsePourExercice(
+  exercice: Exercice,
+  correcte: boolean,
+): ReponseApprenant {
+  switch (exercice.format) {
+    case "qcm":
+      return {
+        exerciceId: exercice.id,
+        format: "qcm",
+        indexChoisi: correcte
+          ? exercice.bonneReponse
+          : (exercice.bonneReponse + 1) % exercice.options.length,
+      };
+    case "trous": {
+      const remplissages: Record<string, string[]> = {};
+      for (const phrase of exercice.phrases) {
+        remplissages[phrase.id] = [
+          correcte ? (phrase.solutions[0] ?? "") : "mauvais",
+        ];
+      }
+      return { exerciceId: exercice.id, format: "trous", remplissages };
+    }
+    case "appariement": {
+      const associations: Record<string, string> = {};
+      for (const paire of exercice.paires) {
+        associations[paire.id] = correcte ? paire.droite : "xxx";
+      }
+      return { exerciceId: exercice.id, format: "appariement", associations };
+    }
+    case "production_libre":
+      return {
+        exerciceId: exercice.id,
+        format: "production_libre",
+        contenu: correcte ? "bonne réponse" : "mauvaise réponse",
+      };
+  }
 }
 
 async function avancerJusquAuxExercices(
@@ -58,10 +103,11 @@ async function maitriserNotion(
 ) {
   let etat = await avancerJusquAuxExercices(orchestrateur, contexte);
   for (let i = 0; i < 3; i++) {
-    etat = await orchestrateur.repondreExercice(etat, {
-      exerciceId: etat.etatExercices!.exerciceCourant.id,
-      contenu: `réponse ${i}`,
-    });
+    const exercice = etat.etatExercices!.exerciceCourant;
+    etat = await orchestrateur.repondreExercice(
+      etat,
+      reponsePourExercice(exercice, true),
+    );
     if (etat.etape === "recompense") {
       return etat;
     }
@@ -118,6 +164,7 @@ describe("OrchestrateurCycle", () => {
     etat = await orchestrateur.avancer(etat);
     expect(etat.etape).toBe("exercices");
     expect(etat.etatExercices?.guidageActuel).toBe("fort");
+    expect(etat.etatExercices?.exerciceCourant.format).toBe("qcm");
 
     etat = await maitriserNotion(orchestrateur, contexte);
     expect(etat.etape).toBe("recompense");
@@ -137,6 +184,7 @@ describe("OrchestrateurCycle", () => {
 
     const etat = await avancerJusquAuxExercices(orchestrateur, contexte);
     expect(etat.etatExercices?.guidageActuel).toBe("autonome");
+    expect(etat.etatExercices?.exerciceCourant.format).toBe("production_libre");
   });
 
   it("rejette demarrer sans roadmap", async () => {
@@ -156,37 +204,32 @@ describe("OrchestrateurCycle", () => {
     await expect(
       orchestrateur.repondreExercice(etat, {
         exerciceId: "exo-invalide",
-        contenu: "réponse",
+        format: "qcm",
+        indexChoisi: 0,
       }),
     ).rejects.toThrow("La réponse ne correspond pas à l'exercice courant");
   });
 
-  it("déclenche la remédiation sur réponse incorrecte", async () => {
-    const orchestrateur = new OrchestrateurCycle(
-      creerDependancesCycleMock({
-        analyser: async () => ({
-          correcte: false,
-          pourquoi: "Confusion sur les prérequis",
-          connaissanceManquante: "confusion sur les prérequis",
-        }),
-      }),
-    );
+  it("déclenche la remédiation sur réponse incorrecte (format fermé)", async () => {
+    const orchestrateur = new OrchestrateurCycle(creerDependancesCycleMock());
     const contexte = creerContexte(roadmapSimple);
 
     let etat = await avancerJusquAuxExercices(orchestrateur, contexte);
-    etat = await orchestrateur.repondreExercice(etat, {
-      exerciceId: etat.etatExercices!.exerciceCourant.id,
-      contenu: "mauvaise réponse",
-    });
+    const exercice = etat.etatExercices!.exerciceCourant;
+    etat = await orchestrateur.repondreExercice(
+      etat,
+      reponsePourExercice(exercice, false),
+    );
 
     expect(etat.etape).toBe("exercices");
-    expect(etat.etatExercices?.lacuneActive).toBe("confusion sur les prérequis");
+    expect(etat.etatExercices?.lacuneActive).toBeTruthy();
     expect(etat.etatExercices?.guidageActuel).toBe("fort");
     expect(etat.contexte.profil.lacunes).toHaveLength(1);
     expect(etat.contenu.type).toBe("exercice");
     if (etat.contenu.type === "exercice") {
-      expect(etat.contenu.exercice.cibleLacune).toBe("confusion sur les prérequis");
+      expect(etat.contenu.exercice.cibleLacune).toBeTruthy();
       expect(etat.contenu.correctionPrecedente).toBeDefined();
+      expect(etat.contenu.correctionPrecedente?.items.length).toBeGreaterThan(0);
     }
   });
 
@@ -205,49 +248,47 @@ describe("OrchestrateurCycle", () => {
     let etat = await avancerJusquAuxExercices(orchestrateur, contexte);
     expect(etat.etatExercices?.guidageActuel).toBe("fort");
 
-    etat = await orchestrateur.repondreExercice(etat, {
-      exerciceId: etat.etatExercices!.exerciceCourant.id,
-      contenu: "réponse 1",
-    });
+    etat = await orchestrateur.repondreExercice(
+      etat,
+      reponsePourExercice(etat.etatExercices!.exerciceCourant, true),
+    );
     expect(etat.etatExercices?.guidageActuel).toBe("modere");
 
-    etat = await orchestrateur.repondreExercice(etat, {
-      exerciceId: etat.etatExercices!.exerciceCourant.id,
-      contenu: "réponse 2",
-    });
+    etat = await orchestrateur.repondreExercice(
+      etat,
+      reponsePourExercice(etat.etatExercices!.exerciceCourant, true),
+    );
     expect(etat.etatExercices?.guidageActuel).toBe("autonome");
   });
 
   it("bloque la maîtrise si réponse incorrecte en guidage autonome", async () => {
-    let appels = 0;
     const orchestrateur = new OrchestrateurCycle(
       creerDependancesCycleMock({
-        analyser: async () => {
-          appels += 1;
-          if (appels <= 2) {
-            return { correcte: true, pourquoi: "ok" };
-          }
-          return { correcte: false, pourquoi: "erreur en autonome", confusion: "mélange" };
-        },
+        analyser: async () => ({
+          correcte: false,
+          pourquoi: "erreur en autonome",
+          confusion: "mélange",
+        }),
       }),
     );
     const contexte = creerContexte(roadmapSimple);
 
     let etat = await avancerJusquAuxExercices(orchestrateur, contexte);
-    etat = await orchestrateur.repondreExercice(etat, {
-      exerciceId: etat.etatExercices!.exerciceCourant.id,
-      contenu: "r1",
-    });
-    etat = await orchestrateur.repondreExercice(etat, {
-      exerciceId: etat.etatExercices!.exerciceCourant.id,
-      contenu: "r2",
-    });
+    etat = await orchestrateur.repondreExercice(
+      etat,
+      reponsePourExercice(etat.etatExercices!.exerciceCourant, true),
+    );
+    etat = await orchestrateur.repondreExercice(
+      etat,
+      reponsePourExercice(etat.etatExercices!.exerciceCourant, true),
+    );
     expect(etat.etatExercices?.guidageActuel).toBe("autonome");
+    expect(etat.etatExercices?.exerciceCourant.format).toBe("production_libre");
 
-    etat = await orchestrateur.repondreExercice(etat, {
-      exerciceId: etat.etatExercices!.exerciceCourant.id,
-      contenu: "r3 incorrecte",
-    });
+    etat = await orchestrateur.repondreExercice(
+      etat,
+      reponsePourExercice(etat.etatExercices!.exerciceCourant, false),
+    );
     expect(etat.etape).toBe("exercices");
     expect(etat.etatExercices?.guidageActuel).toBe("fort");
     expect(etat.contexte.profil.notionsMaitrisees).toHaveLength(0);

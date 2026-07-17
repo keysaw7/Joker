@@ -2,6 +2,7 @@ import type {
   ContexteApprentissage,
   DifficulteDiagnostic,
   Exercice,
+  FormatExercice,
   NiveauGuidage,
   Notion,
   QuestionDiagnostic,
@@ -297,6 +298,7 @@ export function promptGenererExercice(
   contexte: ContexteApprentissage,
   notion: Notion,
   guidage: NiveauGuidage,
+  format: FormatExercice,
 ): string {
   return `Capacité : génération d'exercice.
 
@@ -311,7 +313,15 @@ Niveau de guidage demandé : ${guidage}
 - modere : quelques indices
 - autonome : l'apprenant doit raisonner seul
 
-Crée un exercice adapté au profil et au niveau de guidage.`;
+Format imposé (respecte STRICTEMENT ce format dans le champ format) : ${format}
+Champs à remplir selon le format (mets null pour tous les autres) :
+- qcm : question, options (2-6), bonneReponse (index 0-based) ; phrases/paires/enonce/criteres/aide/distracteurs = null
+- trous : phrases[{ id, texteAvecTrous avec exactement un marqueur ___, solutions[] }] ; question/options/bonneReponse/paires/enonce/… = null
+- appariement : paires[{ id, gauche, droite }], distracteurs optionnels ou null ; le reste = null
+- production_libre : enonce, criteres optionnels, aide optionnelle ; le reste = null
+
+Crée UN exercice dans ce format exact, adapté au profil et au guidage.
+Remplis cibleLacune avec null sauf remédiation.`;
 }
 
 export function promptAnalyserReponse(
@@ -338,6 +348,7 @@ export function promptCorriger(
   contexte: ContexteApprentissage,
   exercice: Exercice,
   analyseJson: string,
+  itemsJson?: string,
 ): string {
   return `Capacité : correction personnalisée.
 
@@ -350,14 +361,18 @@ ${JSON.stringify(exercice, null, 2)}
 Analyse de la réponse :
 ${analyseJson}
 
-Rédige une explication personnalisée, bienveillante et pédagogique,
-adaptée au profil de l'apprenant.`;
+${itemsJson ? `Détail d'évaluation (items) :\n${itemsJson}\n` : ""}
+Rédige un feedback pédagogique structuré :
+- resume : explication bienveillante et claire (pas un mur de texte)
+- pointsForts : liste courte des réussites (ou null)
+- aRetravailler : liste courte des points à retravailler (ou null)`;
 }
 
 export function promptRemediation(
   contexte: ContexteApprentissage,
   notion: Notion,
   lacune: string,
+  format: FormatExercice,
 ): string {
   return `Capacité : remédiation ciblée.
 
@@ -369,7 +384,11 @@ ${JSON.stringify(notion, null, 2)}
 
 Lacune à combler : ${lacune}
 
-Génère un exercice ciblant précisément cette lacune, avec un guidage fort.`;
+Format imposé : ${format}
+Guidage : fort (cibleLacune doit reprendre la lacune).
+Mets null pour les champs non pertinents au format (schéma plat).
+
+Génère UN exercice dans ce format exact, ciblant précisément cette lacune.`;
 }
 
 export function promptAdaptation(contexte: ContexteApprentissage): string {

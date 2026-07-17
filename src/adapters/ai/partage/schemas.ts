@@ -161,12 +161,49 @@ export const schemaExempleExpertSansNotionId = z.object({
   intentions: z.array(schemaIntentionExempleExpert).min(3).max(5),
 });
 
-export const schemaExerciceSansIds = z.object({
-  enonce: z.string(),
-  guidage: schemaNiveauGuidage,
-  cibleLacune: z.string().nullable(),
+export const schemaFormatExercice = z.enum([
+  "qcm",
+  "trous",
+  "appariement",
+  "production_libre",
+]);
+
+const schemaPhraseATrous = z.object({
+  id: z.string(),
+  texteAvecTrous: z.string(),
+  solutions: z.array(z.string()).min(1),
 });
 
+const schemaPaireAppariement = z.object({
+  id: z.string(),
+  gauche: z.string(),
+  droite: z.string(),
+});
+
+/**
+ * Schéma plat compatible OpenAI structured outputs
+ * (pas de oneOf / discriminatedUnion — même pattern que schemaIntentionBloc).
+ * Les champs non pertinents pour le format demandé doivent être null.
+ */
+export const schemaExerciceSansIds = z.object({
+  format: schemaFormatExercice,
+  consigne: z.string(),
+  guidage: schemaNiveauGuidage,
+  cibleLacune: z.string().nullable(),
+  // qcm
+  question: z.string().nullable(),
+  options: z.array(z.string()).nullable(),
+  bonneReponse: z.number().int().nonnegative().nullable(),
+  // trous
+  phrases: z.array(schemaPhraseATrous).nullable(),
+  // appariement
+  paires: z.array(schemaPaireAppariement).nullable(),
+  distracteurs: z.array(z.string()).nullable(),
+  // production_libre
+  enonce: z.string().nullable(),
+  criteres: z.array(z.string()).nullable(),
+  aide: z.string().nullable(),
+});
 export const schemaAnalyseReponse = z.object({
   correcte: z.boolean(),
   pourquoi: z.string(),
@@ -176,7 +213,9 @@ export const schemaAnalyseReponse = z.object({
 });
 
 export const schemaCorrectionSansIds = z.object({
-  explicationPersonnalisee: z.string(),
+  resume: z.string(),
+  pointsForts: z.array(z.string()).nullable(),
+  aRetravailler: z.array(z.string()).nullable(),
 });
 
 export const schemaResultatAdaptationSansIds = z.object({

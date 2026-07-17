@@ -5,6 +5,7 @@ import type {
   ProfilApprenant,
   ReponseDiagnostic,
 } from "@/core/domain";
+import { modeleApprenantInitial } from "@/core/domain";
 
 /** Profil vide au démarrage d'un nouvel objectif. */
 export function profilInitial(objectifId: string): ProfilApprenant {
@@ -25,6 +26,7 @@ export function profilInitial(objectifId: string): ProfilApprenant {
 export function contexteInitial(
   domaine: Domaine,
   objectif: Objectif,
+  eleveId: string = objectif.id,
 ): ContexteApprentissage {
   return {
     domaine,
@@ -34,6 +36,8 @@ export function contexteInitial(
     notionCouranteId: null,
     reponsesDiagnostic: [],
     estimationNiveau: null,
+    modeleApprenant: modeleApprenantInitial(eleveId),
+    grapheCompetences: null,
   };
 }
 

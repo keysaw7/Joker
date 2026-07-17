@@ -40,6 +40,8 @@ function etatCycle(overrides: Partial<EtatCycle> = {}): EtatCycle {
       notionCouranteId: "n1",
       reponsesDiagnostic: [],
       estimationNiveau: null,
+    modeleApprenant: null,
+    grapheCompetences: null,
     },
     etape: "problematique",
     contenu: {
@@ -69,41 +71,45 @@ describe("fusionnerArchive", () => {
   });
 
   it("empile les échanges d'exercice", () => {
+    const exercice = {
+      id: "ex-1",
+      notionId: "n1",
+      format: "production_libre" as const,
+      consigne: "Réponds",
+      enonce: "Question ?",
+      guidage: "fort" as const,
+    };
+    const reponse = {
+      exerciceId: "ex-1",
+      format: "production_libre" as const,
+      contenu: "Ma réponse",
+    };
     const etat = etatCycle({
       etape: "exercices",
       contenu: {
         type: "exercice",
-        exercice: {
-          id: "ex-1",
-          notionId: "n1",
-          enonce: "Question ?",
-          guidage: "fort",
-        },
+        exercice,
         correctionPrecedente: {
           exerciceId: "ex-1",
           analyse: { correcte: false, pourquoi: "Incomplet" },
-          explicationPersonnalisee: "Presque",
+          resume: "Presque",
+          items: [],
         },
       },
       etatExercices: {
-        exerciceCourant: {
-          id: "ex-1",
-          notionId: "n1",
-          enonce: "Question ?",
-          guidage: "fort",
-        },
+        exerciceCourant: exercice,
         guidageActuel: "fort",
         lacuneActive: null,
       },
     });
 
-    const archive = fusionnerArchive(null, etat, {
-      enonce: "Question ?",
-      reponse: "Ma réponse",
-    });
+    const archive = fusionnerArchive(null, etat, { exercice, reponse });
 
     expect(archive.notions[0]?.echangesExercice).toHaveLength(1);
     expect(archive.notions[0]?.echangesExercice[0]?.reponse).toBe("Ma réponse");
+    expect(archive.notions[0]?.echangesExercice[0]?.reponseStructuree).toEqual(
+      reponse,
+    );
   });
 });
 

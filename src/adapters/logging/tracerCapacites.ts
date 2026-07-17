@@ -78,9 +78,14 @@ export function tracerCapacites<T extends CapacitesTracees>(capacites: T): T {
         ),
     },
     generateurExercices: {
-      genererExercice: (contexte, notion, guidage) =>
+      genererExercice: (contexte, notion, guidage, format) =>
         tracerAppel("generateurExercices.genererExercice", () =>
-          capacites.generateurExercices.genererExercice(contexte, notion, guidage),
+          capacites.generateurExercices.genererExercice(
+            contexte,
+            notion,
+            guidage,
+            format,
+          ),
         ),
     },
     analyseurErreurs: {
@@ -90,15 +95,20 @@ export function tracerCapacites<T extends CapacitesTracees>(capacites: T): T {
         ),
     },
     correcteur: {
-      corriger: (contexte, exercice, analyse) =>
+      corriger: (contexte, exercice, analyse, items) =>
         tracerAppel("correcteur.corriger", () =>
-          capacites.correcteur.corriger(contexte, exercice, analyse),
+          capacites.correcteur.corriger(contexte, exercice, analyse, items),
         ),
     },
     remediation: {
-      genererExerciceCible: (contexte, notion, lacune) =>
+      genererExerciceCible: (contexte, notion, lacune, format) =>
         tracerAppel("remediation.genererExerciceCible", () =>
-          capacites.remediation.genererExerciceCible(contexte, notion, lacune),
+          capacites.remediation.genererExerciceCible(
+            contexte,
+            notion,
+            lacune,
+            format,
+          ),
         ),
     },
     adaptation: {

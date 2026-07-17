@@ -167,13 +167,98 @@ export function normaliserExercice(
   genere: ExerciceGenere,
   ids: { id: string; notionId: string },
 ): Exercice {
-  return {
+  const consigne =
+    texteNonVide(genere.consigne) ?? `Exercice (${genere.format})`;
+  const base = {
     id: ids.id,
     notionId: ids.notionId,
-    enonce: genere.enonce,
+    consigne,
     guidage: genere.guidage,
     ...(genere.cibleLacune != null ? { cibleLacune: genere.cibleLacune } : {}),
   };
+
+  switch (genere.format) {
+    case "qcm": {
+      const question = texteNonVide(genere.question);
+      const options = (genere.options ?? [])
+        .map((o) => o.trim())
+        .filter(Boolean);
+      const bonneReponse = genere.bonneReponse;
+      if (!question || options.length < 2 || bonneReponse == null) {
+        throw new Error(
+          "Exercice QCM incomplet : question, options (≥2) et bonneReponse requis",
+        );
+      }
+      return {
+        ...base,
+        format: "qcm",
+        question,
+        options,
+        bonneReponse: Math.min(
+          Math.max(0, bonneReponse),
+          options.length - 1,
+        ),
+      };
+    }
+    case "trous": {
+      const phrases = (genere.phrases ?? []).filter(
+        (p) =>
+          texteNonVide(p.id) &&
+          texteNonVide(p.texteAvecTrous) &&
+          p.solutions.length > 0,
+      );
+      if (phrases.length < 1) {
+        throw new Error(
+          "Exercice à trous incomplet : au moins une phrase avec solutions est requise",
+        );
+      }
+      return {
+        ...base,
+        format: "trous",
+        phrases,
+      };
+    }
+    case "appariement": {
+      const paires = (genere.paires ?? []).filter(
+        (p) =>
+          texteNonVide(p.id) &&
+          texteNonVide(p.gauche) &&
+          texteNonVide(p.droite),
+      );
+      if (paires.length < 2) {
+        throw new Error(
+          "Exercice d'appariement incomplet : au moins 2 paires sont requises",
+        );
+      }
+      return {
+        ...base,
+        format: "appariement",
+        paires,
+        ...(genere.distracteurs != null && genere.distracteurs.length > 0
+          ? { distracteurs: genere.distracteurs }
+          : {}),
+      };
+    }
+    case "production_libre": {
+      const enonce = texteNonVide(genere.enonce);
+      if (!enonce) {
+        throw new Error(
+          "Exercice de production libre incomplet : enonce requis",
+        );
+      }
+      return {
+        ...base,
+        format: "production_libre",
+        enonce,
+        ...(genere.criteres != null && genere.criteres.length > 0
+          ? { criteres: genere.criteres }
+          : {}),
+        ...(genere.aide != null && genere.aide.trim() !== ""
+          ? { aide: genere.aide.trim() }
+          : {}),
+      };
+    }
+  }
 }
 
 export function normaliserAnalyse(analyse: AnalyseGeneree): AnalyseReponse {

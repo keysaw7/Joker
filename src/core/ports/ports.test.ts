@@ -30,6 +30,8 @@ function creerContexte(
     notionCouranteId: null,
     reponsesDiagnostic: [],
     estimationNiveau: null,
+    modeleApprenant: null,
+    grapheCompetences: null,
     ...overrides,
   };
 }
@@ -116,19 +118,22 @@ describe("ports — contrats implémentables hors ligne", () => {
     const exercice = await capacites.generateurExercices.genererExercice(
       contexte,
       notion,
-      "fort",
+      "autonome",
+      "production_libre",
     );
     const analyse = await capacites.analyseurErreurs.analyser(contexte, exercice, {
       exerciceId: exercice.id,
+      format: "production_libre",
       contenu: "ma réponse",
     });
     const correction = await capacites.correcteur.corriger(contexte, exercice, analyse);
-    expect(correction.explicationPersonnalisee).toBeTruthy();
+    expect(correction.resume).toBeTruthy();
 
     const exerciceCible = await capacites.remediation.genererExerciceCible(
       contexte,
       notion,
       "confusion sur les prérequis",
+      "qcm",
     );
     expect(exerciceCible.cibleLacune).toBe("confusion sur les prérequis");
     expect(exerciceCible.guidage).toBe("fort");

@@ -1,10 +1,23 @@
 import type {
+  AnalyseReponse,
   ContexteApprentissage,
   EtatCycle,
   EtatExercices,
+  Exercice,
+  FeedbackItem,
+  ModeleApprenant,
   Notion,
+  Observation,
   ReponseApprenant,
 } from "@/core/domain";
+import { etatGrapheVide, formatExerciceEstFerme } from "@/core/domain";
+import {
+  creerLearningModel,
+  grapheDepuisRoadmap,
+  guidageInitialDepuisModele,
+  projeterProfilApprenant,
+  type LearningModel,
+} from "@/core/modele-apprentissage";
 import type {
   Adaptation,
   AnalyseurErreurs,
@@ -13,9 +26,12 @@ import type {
   GenerateurDeContenu,
   GenerateurExercices,
   Persistance,
+  PersistanceModeleApprentissage,
   Remediation,
 } from "@/core/ports";
+import { evaluerExercice } from "./evaluateurExercice";
 import {
+  choisirFormatExercice,
   creerRecompense,
   enrichirProfil,
   extraireLacune,
@@ -27,7 +43,6 @@ import {
   prochainGuidage,
   selectionnerNotionCourante,
 } from "./regles";
-import { guidageInitialDepuisScore } from "@/core/parcours/reglesDiagnostic";
 
 export interface DependancesOrchestrateur {
   generateurContenu: GenerateurDeContenu;
@@ -38,16 +53,27 @@ export interface DependancesOrchestrateur {
   remediation: Remediation;
   adaptation: Adaptation;
   persistance?: Persistance;
+  learningModel?: LearningModel;
+  persistanceModele?: PersistanceModeleApprentissage;
 }
 
 export class OrchestrateurCycle {
-  constructor(private readonly deps: DependancesOrchestrateur) {}
+  private readonly lm: LearningModel;
+
+  constructor(private readonly deps: DependancesOrchestrateur) {
+    this.lm = deps.learningModel ?? creerLearningModel();
+  }
 
   async demarrer(contexte: ContexteApprentissage): Promise<EtatCycle> {
     if (!contexte.roadmap) {
       throw new Error(
         "L'orchestrateur du Cycle requiert une roadmap dans le contexte",
       );
+    }
+
+    let graphe = contexte.grapheCompetences;
+    if (!graphe) {
+      graphe = grapheDepuisRoadmap(contexte.roadmap, contexte.domaine.id);
     }
 
     const notionsMaitrisees = contexte.profil.notionsMaitrisees;
@@ -58,6 +84,10 @@ export class OrchestrateurCycle {
 
     const contexteMisAJour = mettreAJourContexte(contexte, {
       notionCouranteId: notion.id,
+      grapheCompetences: graphe,
+      modeleApprenant:
+        contexte.modeleApprenant ??
+        this.lm.inference.initialiser(contexte.objectif.id),
     });
     const problematique = await this.deps.generateurContenu.genererProblematique(
       contexteMisAJour,
@@ -94,13 +124,19 @@ export class OrchestrateurCycle {
         };
       }
       case "exempleExpert": {
-        const guidageInitial = guidageInitialDepuisScore(
+        const guidageInitial = guidageInitialDepuisModele(
+          contexte.modeleApprenant,
           contexte.profil.niveauEstime ?? 0,
+        );
+        const format = choisirFormatExercice(
+          guidageInitial,
+          contexte.modeleApprenant,
         );
         const exercice = await this.deps.generateurExercices.genererExercice(
           contexte,
           notion,
           guidageInitial,
+          format,
         );
         const etatExercices: EtatExercices = {
           exerciceCourant: exercice,
@@ -138,20 +174,50 @@ export class OrchestrateurCycle {
     const { etatExercices } = etat;
     let { contexte } = etat;
 
-    const analyse = await this.deps.analyseurErreurs.analyser(
+    let analyse: AnalyseReponse;
+    let items: readonly FeedbackItem[] = [];
+
+    if (formatExerciceEstFerme(exercice.format)) {
+      const evaluation = evaluerExercice(exercice, reponse);
+      analyse = evaluation.analyse;
+      items = evaluation.items;
+    } else {
+      analyse = await this.deps.analyseurErreurs.analyser(
+        contexte,
+        exercice,
+        reponse,
+      );
+    }
+
+    const integre = await this.integrerObservationsExercice(
       contexte,
       exercice,
-      reponse,
+      analyse,
+      notion,
     );
+    contexte = integre;
 
     contexte = mettreAJourContexte(contexte, {
       profil: enrichirProfil(contexte.profil, analyse, notion),
     });
 
+    // Resynchronise la projection après enrichissement textuel
+    if (contexte.modeleApprenant) {
+      contexte = mettreAJourContexte(contexte, {
+        profil: projeterProfilApprenant(
+          contexte.modeleApprenant,
+          contexte.grapheCompetences,
+          contexte.objectif.id,
+          contexte.profil,
+        ),
+      });
+    }
+
     const correction = await this.deps.correcteur.corriger(
       contexte,
       exercice,
       analyse,
+      items,
     );
 
     if (notionEstMaitrisee(etatExercices, analyse)) {
@@ -159,9 +225,10 @@ export class OrchestrateurCycle {
         profil: marquerNotionMaitrisee(contexte.profil, notion),
       });
 
+      // Observation de maîtrise de notion
+      contexte = await this.marquerNotionDansModele(contexte, notion, true);
+
       const resultat = await this.deps.adaptation.adapter(contexte);
-      // Fusionne l'adaptation IA sans perdre les notions déjà maîtrisées
-      // (les IDs de notions sont préservés côté adapter / construireRoadmap).
       const notionsMaitrisees = [
         ...new Set([
           ...contexte.profil.notionsMaitrisees,
@@ -170,14 +237,38 @@ export class OrchestrateurCycle {
           ),
         ]),
       ];
+
+      let graphe = contexte.grapheCompetences;
+      if (graphe) {
+        graphe = this.lm.graphe.fusionnerDepuisRoadmap(
+          graphe,
+          resultat.roadmap,
+          contexte.domaine.id,
+        );
+      } else {
+        graphe = grapheDepuisRoadmap(resultat.roadmap, contexte.domaine.id);
+      }
+
+      const profilFusionne = {
+        ...resultat.profil,
+        notionsMaitrisees,
+      };
+      const profilFinal = contexte.modeleApprenant
+        ? projeterProfilApprenant(
+            contexte.modeleApprenant,
+            graphe,
+            contexte.objectif.id,
+            profilFusionne,
+          )
+        : profilFusionne;
+
       const contexteAdapte = mettreAJourContexte(contexte, {
-        profil: {
-          ...resultat.profil,
-          notionsMaitrisees,
-        },
+        profil: profilFinal,
         roadmap: resultat.roadmap,
+        grapheCompetences: graphe,
       });
       await this.persiste(contexteAdapte);
+      await this.persisteModele(contexteAdapte.modeleApprenant);
 
       const recompense = creerRecompense(notion);
 
@@ -191,31 +282,76 @@ export class OrchestrateurCycle {
     }
 
     const lacune = extraireLacune(analyse);
-    const guidageSuivant = prochainGuidage(etatExercices.guidageActuel, analyse);
+    const recommandation = contexte.modeleApprenant && contexte.grapheCompetences
+      ? this.lm.recommandation.recommander(
+          contexte.modeleApprenant,
+          contexte.grapheCompetences,
+          {
+            phase: "cycle",
+            notionsEligibles: [notion.id],
+            notionsMaitrisees: contexte.profil.notionsMaitrisees,
+          },
+        )
+      : null;
 
-    let prochainExercice;
+    const guidageSuivant =
+      recommandation?.type === "exercer" && recommandation.notionId === notion.id
+        ? recommandation.guidage
+        : prochainGuidage(etatExercices.guidageActuel, analyse);
+
+    let prochainExercice: Exercice;
     let lacuneActive: string | null = null;
 
-    if (lacune) {
-      prochainExercice = await this.deps.remediation.genererExerciceCible(
-        contexte,
-        notion,
-        lacune,
-      );
-      lacuneActive = lacune;
+    if (lacune || recommandation?.type === "remedier") {
+      const cible =
+        lacune ??
+        (recommandation?.type === "remedier" ? recommandation.erreurId : null);
+      if (cible) {
+        const formatRemediation =
+          recommandation?.type === "exercer" && recommandation.format
+            ? recommandation.format
+            : choisirFormatExercice(GUIDAGE_INITIAL, contexte.modeleApprenant, {
+                remediation: true,
+              });
+        prochainExercice = await this.deps.remediation.genererExerciceCible(
+          contexte,
+          notion,
+          cible,
+          formatRemediation,
+        );
+        lacuneActive = cible;
+      } else {
+        const format =
+          recommandation?.type === "exercer" && recommandation.format
+            ? recommandation.format
+            : choisirFormatExercice(guidageSuivant, contexte.modeleApprenant);
+        prochainExercice = await this.deps.generateurExercices.genererExercice(
+          contexte,
+          notion,
+          guidageSuivant,
+          format,
+        );
+      }
     } else {
+      const format =
+        recommandation?.type === "exercer" && recommandation.format
+          ? recommandation.format
+          : choisirFormatExercice(guidageSuivant, contexte.modeleApprenant);
       prochainExercice = await this.deps.generateurExercices.genererExercice(
         contexte,
         notion,
         guidageSuivant,
+        format,
       );
     }
 
     const nouvelEtatExercices: EtatExercices = {
       exerciceCourant: prochainExercice,
-      guidageActuel: lacune ? GUIDAGE_INITIAL : guidageSuivant,
+      guidageActuel: lacuneActive ? GUIDAGE_INITIAL : guidageSuivant,
       lacuneActive,
     };
+
+    await this.persisteModele(contexte.modeleApprenant);
 
     return {
       ...etat,
@@ -254,6 +390,84 @@ export class OrchestrateurCycle {
     });
 
     return this.demarrer(contexte);
+  }
+
+  private async integrerObservationsExercice(
+    contexte: ContexteApprentissage,
+    exercice: import("@/core/domain").Exercice,
+    analyse: import("@/core/domain").AnalyseReponse,
+    notion: Notion,
+  ): Promise<ContexteApprentissage> {
+    const graphe =
+      contexte.grapheCompetences ??
+      (contexte.roadmap
+        ? grapheDepuisRoadmap(contexte.roadmap, contexte.domaine.id)
+        : etatGrapheVide(contexte.domaine.id));
+
+    let modele =
+      contexte.modeleApprenant ??
+      this.lm.inference.initialiser(contexte.objectif.id);
+
+    const observations = [
+      ...this.lm.observation.depuisReponseExercice(exercice, analyse, {
+        eleveId: modele.eleveId,
+        objectifId: contexte.objectif.id,
+        notionId: notion.id,
+        noeudIds: [notion.id],
+      }),
+      this.lm.observation.depuisSignalComportemental({
+        type: "preference_format",
+        eleveId: modele.eleveId,
+        objectifId: contexte.objectif.id,
+        notionId: notion.id,
+        noeudIds: [notion.id],
+        format: exercice.format,
+        succes: analyse.correcte,
+      }),
+    ];
+
+    modele = this.lm.inference.integrerLot(modele, observations, graphe);
+
+    for (const obs of observations) {
+      await this.persisteObservation(obs);
+    }
+
+    return mettreAJourContexte(contexte, {
+      modeleApprenant: modele,
+      grapheCompetences: graphe,
+    });
+  }
+
+  private async marquerNotionDansModele(
+    contexte: ContexteApprentissage,
+    notion: Notion,
+    succes: boolean,
+  ): Promise<ContexteApprentissage> {
+    if (!contexte.modeleApprenant) {
+      return contexte;
+    }
+    const graphe =
+      contexte.grapheCompetences ?? etatGrapheVide(contexte.domaine.id);
+    const observation: Observation = {
+      id: crypto.randomUUID(),
+      eleveId: contexte.modeleApprenant.eleveId,
+      type: "revision",
+      horodatage: new Date().toISOString(),
+      noeudIds: [notion.id],
+      preuve: { type: "revision", succes },
+      meta: {
+        objectifId: contexte.objectif.id,
+        notionId: notion.id,
+        source: "systeme",
+      },
+    };
+    const modele = this.lm.inference.integrer(
+      contexte.modeleApprenant,
+      observation,
+      graphe,
+    );
+    await this.persisteObservation(observation);
+    return mettreAJourContexte(contexte, { modeleApprenant: modele });
   }
 
   private resoudreNotion(
@@ -324,5 +538,21 @@ export class OrchestrateurCycle {
     if (contexte.roadmap) {
       await this.deps.persistance.sauvegarderRoadmap(contexte.roadmap);
     }
+  }
+
+  private async persisteModele(
+    modele: ModeleApprenant | null | undefined,
+  ): Promise<void> {
+    if (!this.deps.persistanceModele || !modele) {
+      return;
+    }
+    await this.deps.persistanceModele.sauvegarderModele(modele);
+  }
+
+  private async persisteObservation(observation: Observation): Promise<void> {
+    if (!this.deps.persistanceModele) {
+      return;
+    }
+    await this.deps.persistanceModele.ajouterObservation(observation);
   }
 }

@@ -29,3 +29,17 @@ export type {
   Transcripteur,
 } from "./transcripteur";
 export type { ConcepteurDeCours, PlanificateurCours } from "./concepteurDeCours";
+export type {
+  CompetenceResolue,
+  ContexteObservationDiagnostic,
+  ContexteObservationExercice,
+  MoteurInference,
+  MoteurIncertitude,
+  MoteurObservation,
+  MoteurPrediction,
+  MoteurRecommandation,
+  PersistanceModeleApprentissage,
+  RegistreCompetences,
+  ServiceGrapheCompetences,
+  SignalComportemental,
+} from "./modele-apprentissage";

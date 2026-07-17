@@ -28,6 +28,8 @@ const contexte = {
   notionCouranteId: null,
   reponsesDiagnostic: [],
   estimationNiveau: null,
+    modeleApprenant: null,
+    grapheCompetences: null,
 };
 
 const etatParcours: EtatParcours = {

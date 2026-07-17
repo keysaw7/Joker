@@ -2,9 +2,16 @@ import { creerClientSupabaseServeur } from "@/adapters/auth/supabase/serveur";
 import { exigerUtilisateurCourant } from "@/adapters/auth/utilisateurCourant";
 import { creerStockageAssetsSupabase } from "@/adapters/assets/supabase";
 import { creerStockageAssetsMemoire } from "@/adapters/assets/memoire";
+import { creerPersistanceModeleSupabase } from "@/adapters/persistence/modeleApprentissageSupabase";
 import { creerPersistanceSupabase } from "@/adapters/persistence/supabase";
 import { creerConcepteurDeCours } from "@/core/cours/concepteurDeCours";
-import type { ConcepteurDeCours, GenerateurDeContenu, Persistance } from "@/core/ports";
+import { creerLearningModel } from "@/core/modele-apprentissage";
+import type {
+  ConcepteurDeCours,
+  GenerateurDeContenu,
+  Persistance,
+  PersistanceModeleApprentissage,
+} from "@/core/ports";
 import { creerModele } from "@/adapters/ai/creerModele";
 import { creerGenerateurImage } from "@/adapters/ai/image";
 import type { SelectionModele } from "@/adapters/ai/fournisseurs";
@@ -22,6 +29,12 @@ export async function persistanceCourante(): Promise<Persistance> {
   const utilisateur = await exigerUtilisateurCourant();
   const client = await creerClientSupabaseServeur();
   return creerPersistanceSupabase(client, utilisateur.id);
+}
+
+export async function persistanceModeleCourante(): Promise<PersistanceModeleApprentissage> {
+  const utilisateur = await exigerUtilisateurCourant();
+  const client = await creerClientSupabaseServeur();
+  return creerPersistanceModeleSupabase(client, utilisateur.id);
 }
 
 type CapacitesMock = ReturnType<typeof creerCapacitesMock>;
@@ -97,10 +110,14 @@ export async function creerParcours(
   const brutes = creerCapacitesBrutes(selection);
   const capacites = tracerCapacites(brutes);
   const persistance = await persistanceCourante();
+  const persistanceModele = await persistanceModeleCourante();
+  const learningModel = creerLearningModel();
   return new OrchestrateurParcours({
     diagnostic: capacites.diagnostic,
     planification: capacites.planification,
     persistance,
+    persistanceModele,
+    learningModel,
   });
 }
 
@@ -120,6 +137,8 @@ export async function creerCycle(
     generateurContenu,
   });
   const persistance = await persistanceCourante();
+  const persistanceModele = await persistanceModeleCourante();
+  const learningModel = creerLearningModel();
 
   return new OrchestrateurCycle({
     generateurContenu: capacites.generateurContenu,
@@ -130,6 +149,8 @@ export async function creerCycle(
     remediation: capacites.remediation,
     adaptation: capacites.adaptation,
     persistance,
+    persistanceModele,
+    learningModel,
   });
 }
 

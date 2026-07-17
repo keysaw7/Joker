@@ -448,17 +448,24 @@ export function creerCapacitesIA(modele: LanguageModel): {
   };
 
   const generateurExercices: GenerateurExercices = {
-    async genererExercice(contexte, notion, guidage): Promise<Exercice> {
+    async genererExercice(contexte, notion, guidage, format): Promise<Exercice> {
       const genere = await genererStructure(
         modele,
         schemaExerciceSansIds,
-        promptGenererExercice(contexte, notion, guidage),
+        promptGenererExercice(contexte, notion, guidage, format),
         "exercice",
       );
-      return normaliserExercice(genere, {
+      const normalise = normaliserExercice(genere, {
         id: crypto.randomUUID(),
         notionId: notion.id,
       });
+      // Force le guidage demandé et le format cible si le modèle dérive.
+      if (normalise.format !== format) {
+        throw new Error(
+          `Format généré « ${normalise.format} » ≠ format demandé « ${format} »`,
+        );
+      }
+      return { ...normalise, guidage };
     },
   };
 
@@ -476,35 +483,54 @@ export function creerCapacitesIA(modele: LanguageModel): {
   };
 
   const correcteur: Correcteur = {
-    async corriger(contexte, exercice, analyse): Promise<Correction> {
+    async corriger(contexte, exercice, analyse, items = []): Promise<Correction> {
       const genere = await genererStructure(
         modele,
         schemaCorrectionSansIds,
-        promptCorriger(contexte, exercice, JSON.stringify(analyse, null, 2)),
+        promptCorriger(
+          contexte,
+          exercice,
+          JSON.stringify(analyse, null, 2),
+          items.length > 0 ? JSON.stringify(items, null, 2) : undefined,
+        ),
         "correction",
       );
       return {
         exerciceId: exercice.id,
         analyse,
-        explicationPersonnalisee: genere.explicationPersonnalisee,
+        resume: genere.resume,
+        items,
+        ...(genere.pointsForts != null && genere.pointsForts.length > 0
+          ? { pointsForts: genere.pointsForts }
+          : {}),
+        ...(genere.aRetravailler != null && genere.aRetravailler.length > 0
+          ? { aRetravailler: genere.aRetravailler }
+          : {}),
       };
     },
   };
 
   const remediation: Remediation = {
-    async genererExerciceCible(contexte, notion, lacune): Promise<Exercice> {
+    async genererExerciceCible(contexte, notion, lacune, format): Promise<Exercice> {
       const genere = await genererStructure(
         modele,
         schemaExerciceSansIds,
-        promptRemediation(contexte, notion, lacune),
+        promptRemediation(contexte, notion, lacune, format),
         "remediation",
       );
-      return {
+      const normalise = normaliserExercice(genere, {
         id: crypto.randomUUID(),
         notionId: notion.id,
+      });
+      if (normalise.format !== format) {
+        throw new Error(
+          `Format remédiation « ${normalise.format} » ≠ format demandé « ${format} »`,
+        );
+      }
+      return {
+        ...normalise,
         guidage: "fort",
         cibleLacune: lacune,
-        enonce: genere.enonce,
       };
     },
   };

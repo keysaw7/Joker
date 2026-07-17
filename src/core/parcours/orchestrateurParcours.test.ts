@@ -58,6 +58,9 @@ describe("OrchestrateurParcours", () => {
     expect(etat.contexte.roadmap).not.toBeNull();
     expect(etat.contexte.profil.objectifId).toBe("obj-1");
     expect(etat.contexte.profil.niveauEstime).not.toBeNull();
+    expect(etat.contexte.modeleApprenant).not.toBeNull();
+    expect(etat.contexte.modeleApprenant!.historiqueObservationIds.length).toBeGreaterThan(0);
+    expect(etat.contexte.grapheCompetences).not.toBeNull();
     expect(etat.contexte.reponsesDiagnostic.length).toBeGreaterThanOrEqual(MIN_QUESTIONS);
     expect(etat.contexte.estimationNiveau?.evaluations.length).toBeGreaterThanOrEqual(
       MIN_QUESTIONS,

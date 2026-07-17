@@ -6,9 +6,11 @@ import { avecTrace } from "@/adapters/logging/contexteTrace";
 import type {
   EtapeCycle,
   ProfilEleve,
+  ReponseApprenant,
   ResumeSession,
   SessionPersistee,
 } from "@/core/domain";
+import { normaliserContexteApprentissage } from "@/core/modele-apprentissage";
 import { construireProfilEleve } from "@/core/profil-eleve/agregation";
 import { trouverDomaine, DOMAINES } from "./_data/domaines";
 import { creerCycle, creerParcours, persistanceCourante } from "./_serveur/moteur";
@@ -24,13 +26,31 @@ export interface ResultatEtape {
   readonly termine: boolean;
 }
 
+function normaliserSession(session: SessionPersistee): SessionPersistee {
+  return {
+    ...session,
+    etatParcours: session.etatParcours
+      ? {
+          ...session.etatParcours,
+          contexte: normaliserContexteApprentissage(session.etatParcours.contexte),
+        }
+      : null,
+    etatCycle: session.etatCycle
+      ? {
+          ...session.etatCycle,
+          contexte: normaliserContexteApprentissage(session.etatCycle.contexte),
+        }
+      : null,
+  };
+}
+
 async function chargerSession(objectifId: string): Promise<SessionPersistee> {
   const persistance = await persistanceCourante();
   const session = await persistance.chargerSession(objectifId);
   if (!session) {
     throw new Error(`Session « ${objectifId} » introuvable`);
   }
-  return session;
+  return normaliserSession(session);
 }
 
 function resultatDepuisCycle(etat: import("@/core/domain").EtatCycle): ResultatEtape {
@@ -176,7 +196,7 @@ export async function avancerCycle(objectifId: string): Promise<ResultatEtape> {
 
 export async function repondreExercice(
   objectifId: string,
-  texte: string,
+  reponse: ReponseApprenant,
 ): Promise<ResultatEtape> {
   return avecTrace(
     "repondreExercice",
@@ -187,15 +207,17 @@ export async function repondreExercice(
       }
 
       const etat = session.etatCycle;
-      const enonce = etat.etatExercices!.exerciceCourant.enonce;
-      const reponse = texte.trim();
+      const exercice = etat.etatExercices!.exerciceCourant;
+      if (reponse.exerciceId !== exercice.id) {
+        throw new Error("La réponse ne correspond pas à l'exercice courant");
+      }
+      if (reponse.format !== exercice.format) {
+        throw new Error("Le format de réponse ne correspond pas à l'exercice");
+      }
 
       const orchestrateur = await creerCycle(SELECTION_DEFAUT);
-      const nouvelEtat = await orchestrateur.repondreExercice(etat, {
-        exerciceId: etat.etatExercices!.exerciceCourant.id,
-        contenu: reponse,
-      });
-      await enregistrerSnapshotCycle(nouvelEtat, { enonce, reponse });
+      const nouvelEtat = await orchestrateur.repondreExercice(etat, reponse);
+      await enregistrerSnapshotCycle(nouvelEtat, { exercice, reponse });
       return resultatDepuisCycle(nouvelEtat);
     },
     { objectifId },

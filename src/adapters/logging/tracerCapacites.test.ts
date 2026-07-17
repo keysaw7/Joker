@@ -26,6 +26,8 @@ const contexteMinimal = {
   notionCouranteId: null,
   reponsesDiagnostic: [],
   estimationNiveau: null,
+    modeleApprenant: null,
+    grapheCompetences: null,
 } satisfies ContexteApprentissage;
 
 describe("tracerCapacites", () => {
@@ -62,10 +64,13 @@ describe("tracerCapacites", () => {
       tracees.analyseurErreurs.analyser(contexteMinimal, {
         id: "exo-1",
         notionId: "notion-1",
+        format: "production_libre",
+        consigne: "test",
         enonce: "test",
         guidage: "fort",
       }, {
         exerciceId: "exo-1",
+        format: "production_libre",
         contenu: "réponse",
       }),
     ).rejects.toBe(erreur);

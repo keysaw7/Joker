@@ -4,8 +4,11 @@ import type {
   EtapeArchivee,
   EtapeCycle,
   EtatCycle,
+  Exercice,
   NotionArchivee,
+  ReponseApprenant,
 } from "@/core/domain";
+import { resumeTexteExercice, resumeTexteReponse } from "@/core/domain";
 
 function titreNotion(etat: EtatCycle): string {
   const notionId = etat.contexte.notionCouranteId;
@@ -33,11 +36,16 @@ function fusionnerEtapes(
   return copie;
 }
 
+export interface DonneesReponseExerciceArchive {
+  readonly exercice: Exercice;
+  readonly reponse: ReponseApprenant;
+}
+
 /** Fusionne l'état courant du cycle dans l'archive revisitable. */
 export function fusionnerArchive(
   archivePrecedente: ArchiveCycle | null,
   etat: EtatCycle,
-  reponseExercice?: { enonce: string; reponse: string },
+  reponseExercice?: DonneesReponseExerciceArchive | { enonce: string; reponse: string },
 ): ArchiveCycle {
   const notionId = etat.contexte.notionCouranteId;
   if (!notionId) {
@@ -59,14 +67,27 @@ export function fusionnerArchive(
           ? etat.contenu.correctionPrecedente
           : undefined;
 
-    echanges = [
-      ...echanges,
-      {
-        enonce: reponseExercice.enonce,
-        reponse: reponseExercice.reponse,
-        correction,
-      },
-    ];
+    if ("exercice" in reponseExercice) {
+      echanges = [
+        ...echanges,
+        {
+          enonce: resumeTexteExercice(reponseExercice.exercice),
+          reponse: resumeTexteReponse(reponseExercice.reponse),
+          correction,
+          exercice: reponseExercice.exercice,
+          reponseStructuree: reponseExercice.reponse,
+        },
+      ];
+    } else {
+      echanges = [
+        ...echanges,
+        {
+          enonce: reponseExercice.enonce,
+          reponse: reponseExercice.reponse,
+          correction,
+        },
+      ];
+    }
   }
 
   const nouvelleNotion: NotionArchivee = {

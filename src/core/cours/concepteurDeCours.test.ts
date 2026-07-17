@@ -48,6 +48,8 @@ function creerContexte(notion: Notion): ContexteApprentissage {
     notionCouranteId: notion.id,
     reponsesDiagnostic: [],
     estimationNiveau: null,
+    modeleApprenant: null,
+    grapheCompetences: null,
   };
 }
 

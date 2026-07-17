@@ -1,4 +1,9 @@
-import type { ContexteApprentissage, Exercice, Notion } from "@/core/domain";
+import type {
+  ContexteApprentissage,
+  Exercice,
+  FormatExercice,
+  Notion,
+} from "@/core/domain";
 
 /**
  * Génère un exercice ciblant précisément un point bloquant identifié.
@@ -9,5 +14,6 @@ export interface Remediation {
     contexte: ContexteApprentissage,
     notion: Notion,
     lacune: string,
+    format: FormatExercice,
   ): Promise<Exercice>;
 }

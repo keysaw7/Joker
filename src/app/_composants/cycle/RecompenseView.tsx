@@ -1,5 +1,6 @@
 import type { Correction, Recompense } from "@/core/domain";
 import { Carte } from "../Carte";
+import { CorrectionView } from "./CorrectionView";
 
 interface RecompenseViewProps {
   recompense: Recompense;
@@ -13,20 +14,18 @@ export function RecompenseView({
   termine = false,
 }: RecompenseViewProps) {
   return (
-    <Carte className="contenu-lecture mx-auto text-center">
-      <p className="text-2xl font-semibold text-succes">
-        {recompense.message}
-      </p>
-      {correctionPrecedente && (
-        <p className="mt-3 text-sm text-texte-secondaire">
-          {correctionPrecedente.explicationPersonnalisee}
+    <div className="flex flex-col gap-4 contenu-lecture mx-auto">
+      <Carte className="text-center">
+        <p className="text-2xl font-semibold text-succes">
+          {recompense.message}
         </p>
-      )}
-      {termine && (
-        <p className="mt-4 text-lg font-medium">
-          Tu as maîtrisé toutes les notions de ton parcours.
-        </p>
-      )}
-    </Carte>
+        {termine && (
+          <p className="mt-4 text-lg font-medium">
+            Tu as maîtrisé toutes les notions de ton parcours.
+          </p>
+        )}
+      </Carte>
+      {correctionPrecedente && <CorrectionView correction={correctionPrecedente} />}
+    </div>
   );
 }
