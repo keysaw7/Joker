@@ -10,7 +10,6 @@ import {
 const notion: Notion = {
   id: "notion-1",
   titre: "Pâte à pizza",
-  ordre: 0,
   prerequisIds: [],
   objectifsPedagogiques: ["Comprendre la pâte"],
   criteresDeMaitrise: [{ id: "c1", description: "Réussir une pâte" }],

@@ -1,9 +1,12 @@
 import type {
   ContexteApprentissage,
+  DifficulteDiagnostic,
   Exercice,
   NiveauGuidage,
   Notion,
+  QuestionDiagnostic,
   ReponseApprenant,
+  ReponseDiagnostic,
 } from "@/core/domain";
 
 const PROMPT_SYSTEME = `Tu es un moteur pédagogique expert intégré à l'application Joker.
@@ -21,6 +24,7 @@ export function serialiserContexte(contexte: ContexteApprentissage): string {
       roadmap: contexte.roadmap,
       notionCouranteId: contexte.notionCouranteId,
       reponsesDiagnostic: contexte.reponsesDiagnostic,
+      estimationNiveau: contexte.estimationNiveau,
     },
     null,
     2,
@@ -31,19 +35,64 @@ export function promptSysteme(): string {
   return PROMPT_SYSTEME;
 }
 
-export function promptQuestionsDiagnostic(contexte: ContexteApprentissage): string {
-  return `Capacité : diagnostic initial.
+export function promptQuestionDiagnostic(
+  contexte: ContexteApprentissage,
+  params: {
+    difficulteCible: DifficulteDiagnostic;
+    competencesDejaCouvertes: readonly string[];
+  },
+): string {
+  return `Capacité : diagnostic adaptatif (une question).
 
 Contexte d'apprentissage :
 ${serialiserContexte(contexte)}
 
-Génère exactement 5 questions de diagnostic adaptées au domaine et à l'objectif.
-L'ensemble doit cartographier le niveau réel de l'apprenant (pas de note) :
-- couvrir différents aspects du domaine liés à l'objectif ;
-- progresser en difficulté (du plus accessible au plus exigeant) ;
-- questions ouvertes, claires et distinctes (pas de redondance).
+Génère exactement UNE question de diagnostic ouverte, claire et distincte.
+Difficulté cible (1 = très accessible, 5 = exigeant) : ${params.difficulteCible}.
+Compétences déjà couvertes (ne pas répéter le même competenceId) : ${
+    params.competencesDejaCouvertes.length > 0
+      ? params.competencesDejaCouvertes.join(", ")
+      : "aucune"
+  }.
 
-Retourne les 5 questions dans l'ordre de présentation.`;
+La question doit :
+- cibler une compétence précise du domaine liée à l'objectif ;
+- correspondre au niveau de difficulté demandé ;
+- permettre d'évaluer la maîtrise réelle (pas de QCM).
+
+Retourne intitule, competenceId (slug stable), competenceLibelle et difficulte (= ${params.difficulteCible}).`;
+}
+
+export function promptEvaluerReponseDiagnostic(
+  contexte: ContexteApprentissage,
+  question: QuestionDiagnostic,
+  reponse: ReponseDiagnostic,
+): string {
+  return `Capacité : évaluation d'une réponse au diagnostic.
+
+Contexte d'apprentissage :
+${serialiserContexte(contexte)}
+
+Question posée :
+${JSON.stringify(question, null, 2)}
+
+Réponse de l'apprenant :
+${JSON.stringify(reponse, null, 2)}
+
+Évalue la réponse avec la grille :
+- "maitrise" : réponse correcte et suffisamment développée pour le niveau de la question ;
+- "partiel" : éléments justes mais lacunes, imprécisions ou incomplet ;
+- "absent" : hors-sujet, « je ne sais pas », ou erreur majeure.
+
+Justifie brièvement. Si maitrise ou partiel insuffisant, indique lacuneDetectee (sinon null).`;
+}
+
+/** @deprecated Utiliser promptQuestionDiagnostic */
+export function promptQuestionsDiagnostic(contexte: ContexteApprentissage): string {
+  return promptQuestionDiagnostic(contexte, {
+    difficulteCible: 3,
+    competencesDejaCouvertes: [],
+  });
 }
 
 export function promptConstruireProfil(contexte: ContexteApprentissage): string {
@@ -52,10 +101,11 @@ export function promptConstruireProfil(contexte: ContexteApprentissage): string 
 Contexte d'apprentissage :
 ${serialiserContexte(contexte)}
 
-À partir des réponses au diagnostic, construis un profil fidèle du niveau réel de l'apprenant.
+À partir des réponses au diagnostic et du vecteur estimationNiveau (évaluations structurées),
+construis un profil fidèle du niveau réel de l'apprenant.
 Identifie acquis, compétences, lacunes, erreurs fréquentes probables et préférences pédagogiques.
-Laisse notionsMaitrisees vide ([]) — ce champ est réservé à la progression dans la roadmap
-(il sera géré par le moteur). Mets les connaissances déjà présentes dans acquis/compétences.`;
+Laisse notionsMaitrisees vide ([]) — ce champ est géré par le moteur après la roadmap.
+Mets les connaissances déjà présentes dans acquis/compétences.`;
 }
 
 export function promptGenererRoadmap(contexte: ContexteApprentissage): string {
@@ -67,7 +117,11 @@ ${serialiserContexte(contexte)}
 Découpe l'objectif en une succession ordonnée de notions à apprendre.
 Chaque notion doit avoir des objectifs pédagogiques et des critères de maîtrise mesurables.
 Utilise prerequisOrdres pour indiquer les indices (0-based) des notions prérequises dans le tableau notions.
-Génère entre 3 et 8 notions selon la complexité de l'objectif.`;
+Génère entre 3 et 8 notions selon la complexité de l'objectif.
+
+Le contexte contient estimationNiveau (scores par compétence et évaluations) :
+- priorise les notions qui comblent les lacunes ;
+- mets **toujours** maitriseInitiale à false pour chaque notion (la maîtrise est validée uniquement par le cycle d'exercices, pas par le diagnostic).`;
 }
 
 export function promptGenererProblematique(
@@ -102,7 +156,7 @@ export function promptGenererPlanCours(
   contexte: ContexteApprentissage,
   notion: Notion,
 ): string {
-  return `Capacité : planification d'un cours riche et dynamique.
+  return `Capacité : rédaction du cours affiché à l'élève (leçon complète, pas un syllabus).
 
 Contexte d'apprentissage :
 ${serialiserContexte(contexte)}
@@ -110,25 +164,40 @@ ${serialiserContexte(contexte)}
 Notion cible :
 ${JSON.stringify(notion, null, 2)}
 
-Conçois un plan de cours adapté au profil de l'apprenant avec 5 à 10 blocs variés.
+Objectif de l'élève : « ${contexte.objectif.intitule} »
+
+Rédige le cours que l'élève lira à l'écran : explications, exemples concrets, chiffres ou ratios quand pertinent.
+Couvre les objectifsPedagogiques et prépare aux criteresDeMaitrise de la notion.
+
+Structure obligatoire (5 à 10 blocs variés) :
+1. Accroche (texte ou encadre) — pourquoi c'est utile pour l'objectif
+2. Explication(s) dense(s) — enseigne vraiment (définitions, quantités, méthode)
+3. Supports (analogie, comparaison, tableau, schema, graphique, image) au service de la compréhension
+4. Procédure pas à pas (etapes) si la notion est pratique
+5. Synthèse courte (texte ou encadre)
+6. Dernier bloc : quizFlash (2 à 4 options + explication)
+
+Interdit :
+- Titres ou contenus « Plan de cours… », « Bloc 1 : », « Objectif / Public / Structure »
+- Listes de « Fiche pratique N : » sans paragraphes explicatifs
+- Phrases vides du type « on verra », « ce bloc présente » — enseigne directement
+
 Types disponibles :
-- texte : paragraphes en markdown (titres, listes, gras)
-- encadre : info, attention, astuce ou exemple (variante + markdown)
+- texte : markdown riche (titres ##, listes, gras) — minimum ~3 phrases utiles par bloc texte
+- encadre : info, attention, astuce ou exemple (variante + markdown développé)
 - analogie : source, cible, explication
 - comparaison / tableau : entetes + lignes
-- schema : briefMedia décrivant le schéma Mermaid à générer ensuite
-- graphique : briefMedia décrivant les données à visualiser
-- image : briefMedia + alt (illustration pédagogique claire)
-- etapes : procédure pas à pas
-- quizFlash : question rapide de vérification (2 à 4 options)
+- schema : briefMedia précis pour génération Mermaid ensuite
+- graphique : briefMedia pour visualisation de données
+- image : briefMedia + alt (illustration pédagogique)
+- etapes : chaque étape avec titre + markdown actionnable
+- quizFlash : question, options, bonneReponse, explication
 
 Règles :
-- Commencer par une accroche, finir par un quizFlash
-- Inclure au moins un schema OU graphique ET une image si pertinent
-- Les procédures pas-à-pas (etapes) et le quizFlash appartiennent au cours, pas à l'exemple d'expert
-- Adapter le ton et la complexité au profil
-- Les briefMedia doivent être précis et actionnables pour la génération média
-- Chaque intention utilise un schéma PLAT : remplis uniquement les champs utiles selon le type, mets null pour tous les autres champs
+- titre du JSON = titre de leçon clair (proche de la notion), jamais « Plan de… »
+- Au moins un schema OU graphique ET une image si pertinent
+- Les briefMedia doivent être précis et actionnables
+- Schéma PLAT JSON : champs utiles selon le type, null pour les autres
 
 Champs par type :
 - texte : markdown
@@ -140,14 +209,36 @@ Champs par type :
 - quizFlash : question, options, bonneReponse, explication`;
 }
 
+export function promptReparerPlanCours(
+  contexte: ContexteApprentissage,
+  notion: Notion,
+  defauts: readonly string[],
+  planInvalide: { titre: string; intentions: readonly unknown[] },
+): string {
+  return `${promptGenererPlanCours(contexte, notion)}
+
+Le brouillon suivant a été rejeté par la garde qualité :
+${JSON.stringify(planInvalide, null, 2)}
+
+Défauts à corriger impérativement :
+${defauts.map((d) => `- ${d}`).join("\n")}
+
+Regénère un cours complet corrigé (même schéma JSON), en enseignant réellement — pas un plan pour formateur.`;
+}
+
 export function promptGenererSchema(brief: string, contexte?: string): string {
   return `Capacité : génération de schéma Mermaid pédagogique.
 
 ${contexte ? `Contexte :\n${contexte}\n\n` : ""}Brief :
 ${brief}
 
-Génère du code Mermaid valide (flowchart, sequenceDiagram, mindmap, classDiagram…).
-Pas de balises markdown. Syntaxe Mermaid uniquement, en français pour les libellés.`;
+Préfère un flowchart TD ou LR simple (5 à 8 nœuds max).
+Règles de syntaxe strictes :
+- Pas de balises markdown
+- Libellés en français entre guillemets doubles si espaces ou caractères spéciaux : A["Calcul des quantités"]
+- Évite les parenthèses non échappées dans les libellés ; utilise des guillemets
+- Pas de point-virgule superflu en fin de ligne
+- Syntaxe Mermaid uniquement, une seule déclaration de diagramme`;
 }
 
 export function promptGenererGraphique(brief: string, contexte?: string): string {

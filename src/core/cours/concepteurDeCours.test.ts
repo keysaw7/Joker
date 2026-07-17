@@ -41,11 +41,13 @@ function creerContexte(notion: Notion): ContexteApprentissage {
       erreursFrequentes: [],
       preferencesPedagogiques: [],
       notionsMaitrisees: [],
+      niveauEstime: null,
       miseAJour: "2026-01-01T00:00:00.000Z",
     },
     roadmap,
     notionCouranteId: notion.id,
     reponsesDiagnostic: [],
+    estimationNiveau: null,
   };
 }
 

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { Roadmap } from "@/core/domain";
-import { construireRoadmapDepuisGeneration } from "./construireRoadmap";
+import {
+  construireRoadmapDepuisGeneration,
+  notionsPreMaitriseesDepuisGeneration,
+} from "./construireRoadmap";
 
 describe("construireRoadmapDepuisGeneration", () => {
   it("génère de nouveaux IDs sans roadmap précédente", () => {
@@ -11,6 +14,7 @@ describe("construireRoadmapDepuisGeneration", () => {
           prerequisOrdres: [],
           objectifsPedagogiques: ["Maîtriser la pâte"],
           criteresDeMaitrise: [{ description: "Pétrir correctement" }],
+          maitriseInitiale: false,
         },
       ],
     });
@@ -54,18 +58,21 @@ describe("construireRoadmapDepuisGeneration", () => {
             prerequisOrdres: [],
             objectifsPedagogiques: ["Maîtriser la pâte"],
             criteresDeMaitrise: [{ description: "Pétrir correctement" }],
+          maitriseInitiale: false,
           },
           {
             titre: "Cuisson",
             prerequisOrdres: [0],
             objectifsPedagogiques: ["Cuire au four"],
             criteresDeMaitrise: [{ description: "Cuire juste" }],
+            maitriseInitiale: false,
           },
           {
             titre: "Garniture",
             prerequisOrdres: [1],
             objectifsPedagogiques: ["Garnir"],
             criteresDeMaitrise: [{ description: "Équilibrer" }],
+            maitriseInitiale: false,
           },
         ],
       },
@@ -78,5 +85,30 @@ describe("construireRoadmapDepuisGeneration", () => {
     expect(adaptee.notions[2]?.titre).toBe("Garniture");
     expect(adaptee.notions[2]?.id).not.toBe("notion-pate-stable");
     expect(adaptee.notions[0]?.criteresDeMaitrise[0]?.id).toBe("crit-1");
+  });
+});
+
+describe("notionsPreMaitriseesDepuisGeneration", () => {
+  it("ignore maitriseInitiale true (pas de pré-maîtrise LLM)", () => {
+    const generee = {
+      notions: [
+        {
+          titre: "Pâte",
+          prerequisOrdres: [],
+          objectifsPedagogiques: ["Maîtriser la pâte"],
+          criteresDeMaitrise: [{ description: "Pétrir" }],
+          maitriseInitiale: true,
+        },
+        {
+          titre: "Hydratation",
+          prerequisOrdres: [0],
+          objectifsPedagogiques: ["Calculer l'eau"],
+          criteresDeMaitrise: [{ description: "Ratio correct" }],
+          maitriseInitiale: false,
+        },
+      ],
+    };
+    const roadmap = construireRoadmapDepuisGeneration("obj-1", 1, generee);
+    expect(notionsPreMaitriseesDepuisGeneration(generee, roadmap)).toEqual([]);
   });
 });

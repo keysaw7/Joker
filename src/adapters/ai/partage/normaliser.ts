@@ -148,7 +148,7 @@ export function normaliserIntention(intention: IntentionGeneree): IntentionBloc 
         bonneReponse,
         explication:
           texteNonVide(intention.explication) ??
-          "Révoie ce point dans le cours pour approfondir.",
+          "Revois ce point dans le cours pour approfondir.",
       };
     }
   }

@@ -157,9 +157,9 @@ Le moteur cherche à comprendre l'élève. Il ne cherche **pas** à lui attribue
 - incompréhensions,
 - préférences pédagogiques.
 
-Les questions ne sont **jamais fixes**. Elles sont générées dynamiquement selon le domaine, l'objectif et les réponses précédentes.
+Les questions sont générées **une à une**, de façon adaptative : chaque réponse est évaluée (maîtrise / partiel / absent) sur une compétence ciblée, ce qui oriente la difficulté de la question suivante et une estimation interne (score 0–100, non affichée comme « note » à l'élève).
 
-À la fin du diagnostic, le moteur possède toutes les informations nécessaires pour personnaliser la suite.
+Le diagnostic s'arrête lorsque l'estimation est suffisamment fiable (entre 3 et 8 questions), puis alimente le profil, la roadmap (notions prioritaires ou pré-acquises) et le guidage initial du Cycle.
 
 ### 7.4. Génération du programme *(invisible)*
 

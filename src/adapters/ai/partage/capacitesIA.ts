@@ -9,7 +9,6 @@ import type {
   Problematique,
   ProfilApprenant,
   QuestionDiagnostic,
-  Roadmap,
 } from "@/core/domain";
 import type {
   Adaptation,
@@ -20,6 +19,7 @@ import type {
   GenerateurExercices,
   GenerateurGraphique,
   GenerateurSchema,
+  ParametresQuestionDiagnostic,
   PlanificateurCours,
   PlanificationPedagogique,
   Remediation,
@@ -29,7 +29,8 @@ import { generateText, type LanguageModel, Output } from "ai";
 import type { z } from "zod";
 import { traceIdCourant } from "@/adapters/logging/contexteTrace";
 import { journalIA } from "@/adapters/logging/journal";
-import { construireRoadmapDepuisGeneration } from "./construireRoadmap";
+import { choisirMeilleurPlan, evaluerQualitePlan } from "@/core/cours/qualiteCours";
+import { construireRoadmapDepuisGeneration, notionsPreMaitriseesDepuisGeneration } from "./construireRoadmap";
 import {
   assurerIntentionsExempleExpert,
   filtrerIntentionsExempleExpert,
@@ -45,6 +46,7 @@ import {
   promptAnalyserReponse,
   promptConstruireProfil,
   promptCorriger,
+  promptEvaluerReponseDiagnostic,
   promptGenererExempleExpert,
   promptGenererExercice,
   promptGenererGraphique,
@@ -52,20 +54,22 @@ import {
   promptGenererProblematique,
   promptGenererRoadmap,
   promptGenererSchema,
-  promptQuestionsDiagnostic,
+  promptReparerPlanCours,
+  promptQuestionDiagnostic,
   promptRemediation,
   promptSysteme,
 } from "./prompts";
 import {
   schemaAnalyseReponse,
   schemaCorrectionSansIds,
+  schemaEvaluationDiagnostic,
   schemaExempleExpertSansNotionId,
   schemaExerciceSansIds,
   schemaMermaid,
   schemaPlanCours,
   schemaProblematiqueSansNotionId,
   schemaProfilSansIds,
-  schemaQuestionsDiagnostic,
+  schemaQuestionDiagnosticGeneree,
   schemaResultatAdaptationSansIds,
   schemaRoadmapSansIds,
   schemaSpecGraphique,
@@ -91,15 +95,30 @@ function estModeleOpenAI(modele: LanguageModel): boolean {
   return provider.includes("openai") || id.startsWith("gpt-") || id.startsWith("o");
 }
 
+type VerbosityOpenAI = "low" | "medium" | "high";
+
+interface OptionsGenererStructure {
+  textVerbosity?: VerbosityOpenAI;
+}
+
+function planDepuisGeneration(genere: z.infer<typeof schemaPlanCours>): PlanCours {
+  return {
+    titre: genere.titre,
+    intentions: genere.intentions.map(normaliserIntention),
+  };
+}
+
 async function genererStructure<T>(
   modele: LanguageModel,
   schema: z.ZodType<T>,
   prompt: string,
   etiquette: string,
+  options?: OptionsGenererStructure,
 ): Promise<T> {
   const debut = performance.now();
   const traceId = traceIdCourant();
   const nomModele = idModele(modele);
+  const textVerbosity = options?.textVerbosity ?? "low";
 
   try {
     const resultat = await generateText({
@@ -112,7 +131,7 @@ async function genererStructure<T>(
             providerOptions: {
               openai: {
                 reasoningEffort: "minimal" as const,
-                textVerbosity: "low" as const,
+                textVerbosity,
               },
             },
           }
@@ -213,17 +232,41 @@ export function creerCapacitesIA(modele: LanguageModel): {
   adaptation: Adaptation;
 } {
   const diagnostic: Diagnostic = {
-    async genererQuestions(contexte): Promise<QuestionDiagnostic[]> {
-      const generees = await genererStructure(
+    async genererQuestion(
+      contexte,
+      params: ParametresQuestionDiagnostic,
+    ): Promise<QuestionDiagnostic> {
+      const generee = await genererStructure(
         modele,
-        schemaQuestionsDiagnostic,
-        promptQuestionsDiagnostic(contexte),
-        "questionsDiagnostic",
+        schemaQuestionDiagnosticGeneree,
+        promptQuestionDiagnostic(contexte, {
+          difficulteCible: params.difficulteCible,
+          competencesDejaCouvertes: params.competencesDejaCouvertes,
+        }),
+        "questionDiagnostic",
       );
-      return generees.questions.map((question) => ({
+      return {
         id: crypto.randomUUID(),
-        intitule: question.intitule,
-      }));
+        intitule: generee.intitule,
+        competenceId: generee.competenceId,
+        competenceLibelle: generee.competenceLibelle,
+        difficulte: generee.difficulte as QuestionDiagnostic["difficulte"],
+      };
+    },
+
+    async evaluerReponse(contexte, question, reponse): Promise<import("@/core/domain").EvaluationDiagnostic> {
+      const generee = await genererStructure(
+        modele,
+        schemaEvaluationDiagnostic,
+        promptEvaluerReponseDiagnostic(contexte, question, reponse),
+        "evaluationDiagnostic",
+      );
+      return {
+        questionId: question.id,
+        maitrise: generee.maitrise,
+        justification: generee.justification,
+        lacuneDetectee: generee.lacuneDetectee ?? undefined,
+      };
     },
 
     async construireProfil(contexte): Promise<ProfilApprenant> {
@@ -240,54 +283,95 @@ export function creerCapacitesIA(modele: LanguageModel): {
         lacunes: genere.lacunes,
         erreursFrequentes: genere.erreursFrequentes,
         preferencesPedagogiques: genere.preferencesPedagogiques,
-        // Source de vérité du parcours : toujours vide au diagnostic.
-        // Les acquis antérieurs vont dans acquis/compétences, pas ici.
         notionsMaitrisees: [],
+        niveauEstime: contexte.estimationNiveau?.scoreGlobal ?? null,
         miseAJour: new Date().toISOString(),
       };
     },
   };
 
   const planification: PlanificationPedagogique = {
-    async genererRoadmap(contexte): Promise<Roadmap> {
+    async genererRoadmap(contexte) {
       const generee = await genererStructure(
         modele,
         schemaRoadmapSansIds,
         promptGenererRoadmap(contexte),
         "roadmap",
       );
-      return construireRoadmapDepuisGeneration(
+      const roadmap = construireRoadmapDepuisGeneration(
         contexte.objectif.id,
         1,
         generee,
       );
+      return {
+        roadmap,
+        notionsPreMaitrisees: notionsPreMaitriseesDepuisGeneration(generee, roadmap),
+      };
     },
   };
 
   const planificateurCours: PlanificateurCours = {
     async genererPlanCours(contexte, notion): Promise<PlanCours> {
-      const genere = await genererStructure(
+      const genereInitial = await genererStructure(
         modele,
         schemaPlanCours,
         promptGenererPlanCours(contexte, notion),
         "planCours",
+        { textVerbosity: "high" },
       );
-      return {
-        titre: genere.titre,
-        intentions: genere.intentions.map(normaliserIntention),
-      };
+      let plan = planDepuisGeneration(genereInitial);
+      let evaluation = evaluerQualitePlan(plan);
+
+      if (!evaluation.valide) {
+        const genereReparation = await genererStructure(
+          modele,
+          schemaPlanCours,
+          promptReparerPlanCours(contexte, notion, evaluation.defauts, {
+            titre: plan.titre,
+            intentions: genereInitial.intentions,
+          }),
+          "planCoursReparation",
+          { textVerbosity: "high" },
+        );
+        const planRepare = planDepuisGeneration(genereReparation);
+        const evaluationRepare = evaluerQualitePlan(planRepare);
+        plan = choisirMeilleurPlan(plan, planRepare);
+        evaluation = plan === planRepare ? evaluationRepare : evaluation;
+        if (!evaluation.valide) {
+          console.warn(
+            `[planCours] Qualité sous le seuil après retry : ${evaluation.defauts.join(" | ")}`,
+          );
+        }
+      }
+
+      return plan;
     },
   };
 
-  const generateurSchema: GenerateurSchema = {
-    async genererSchema({ brief, contexte }) {
+  async function genererMermaidAvecRetry(brief: string, contexte?: string) {
+    const tenter = async (etiquette: string) => {
       const genere = await genererStructure(
         modele,
         schemaMermaid,
         promptGenererSchema(brief, contexte),
-        "schema",
+        etiquette,
       );
-      return { mermaid: genere.mermaid };
+      const mermaid = genere.mermaid?.trim() ?? "";
+      if (mermaid.length < 12) {
+        throw new Error("Code Mermaid trop court ou vide.");
+      }
+      return { mermaid };
+    };
+    try {
+      return await tenter("schema");
+    } catch {
+      return await tenter("schemaRetry");
+    }
+  }
+
+  const generateurSchema: GenerateurSchema = {
+    async genererSchema({ brief, contexte }) {
+      return genererMermaidAvecRetry(brief, contexte);
     },
   };
 
@@ -458,6 +542,7 @@ export function creerCapacitesIA(modele: LanguageModel): {
           erreursFrequentes: genere.profil.erreursFrequentes,
           preferencesPedagogiques: genere.profil.preferencesPedagogiques,
           notionsMaitrisees,
+          niveauEstime: contexte.profil.niveauEstime,
           miseAJour: new Date().toISOString(),
         },
         roadmap,

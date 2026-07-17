@@ -48,16 +48,7 @@ export function BlocContenuView({ bloc }: BlocContenuViewProps) {
         </div>
       );
     case "schema":
-      return (
-        <div className="flex flex-col gap-2">
-          <MermaidView mermaid={bloc.mermaid} />
-          {bloc.legende && (
-            <p className="text-sm italic text-texte-secondaire">
-              {bloc.legende}
-            </p>
-          )}
-        </div>
-      );
+      return <MermaidView mermaid={bloc.mermaid} legende={bloc.legende} />;
     case "graphique":
       return (
         <div className="flex flex-col gap-2">

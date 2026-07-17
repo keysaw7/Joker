@@ -90,10 +90,27 @@ export const schemaMermaid = z.object({
   mermaid: z.string(),
 });
 
+export const schemaQuestionDiagnosticGeneree = z.object({
+  intitule: z.string().min(1),
+  competenceId: z.string().min(1),
+  competenceLibelle: z.string().min(1),
+  difficulte: z.number().int().min(1).max(5),
+});
+
+export const schemaMaitriseDiagnostic = z.enum(["maitrise", "partiel", "absent"]);
+
+export const schemaEvaluationDiagnostic = z.object({
+  maitrise: schemaMaitriseDiagnostic,
+  justification: z.string().min(1),
+  lacuneDetectee: z.string().nullable(),
+});
+
+/** @deprecated Lot fixe — conservé pour compatibilité tests legacy si besoin */
 export const schemaQuestionDiagnostic = z.object({
   intitule: z.string().min(1),
 });
 
+/** @deprecated */
 export const schemaQuestionsDiagnostic = z.object({
   questions: z.array(schemaQuestionDiagnostic).length(5),
 });
@@ -121,6 +138,7 @@ export const schemaNotionSansIds = z.object({
   prerequisOrdres: z.array(z.number().int().nonnegative()),
   objectifsPedagogiques: z.array(z.string()).min(1),
   criteresDeMaitrise: z.array(schemaCritereSansId).min(1),
+  maitriseInitiale: z.boolean(),
 });
 
 export const schemaRoadmapSansIds = z.object({

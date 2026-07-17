@@ -44,12 +44,14 @@ describe("schemas IA", () => {
           prerequisOrdres: [],
           objectifsPedagogiques: ["Comprendre les fondements"],
           criteresDeMaitrise: [{ description: "Répondre à un exercice simple" }],
+          maitriseInitiale: false,
         },
         {
           titre: "Approfondissement",
           prerequisOrdres: [0],
           objectifsPedagogiques: ["Aller plus loin"],
           criteresDeMaitrise: [{ description: "Réussir un exercice autonome" }],
+          maitriseInitiale: false,
         },
       ],
     });
@@ -187,7 +189,7 @@ describe("schemas IA", () => {
     });
     expect(intention.type).toBe("quizFlash");
     if (intention.type === "quizFlash") {
-      expect(intention.explication).toContain("Révoie ce point");
+      expect(intention.explication).toContain("Revois ce point");
     }
   });
 
@@ -303,9 +305,9 @@ describe("schemas IA", () => {
         },
         {
           type: "encadre",
+          ...champsNulsIntention,
           variante: "info",
           markdown: "Détail",
-          ...champsNulsIntention,
         },
         {
           type: "quizFlash",
@@ -341,9 +343,9 @@ describe("schemas IA", () => {
         },
         {
           type: "encadre",
+          ...champsNulsIntention,
           variante: "info",
           markdown: "Détail",
-          ...champsNulsIntention,
         },
       ],
     };

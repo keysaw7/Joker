@@ -12,6 +12,8 @@ import {
   urlEtape,
   urlSession,
 } from "@/app/_experience/navigation";
+import type { PhaseAttente } from "@/app/_composants/attente/phasesAttente";
+import { phasePourAvancerCycle } from "@/app/_composants/attente/phasesAttente";
 import type { EtapeCycle } from "@/core/domain";
 import { Bouton } from "../Bouton";
 
@@ -20,6 +22,7 @@ interface BarreActionsCycleProps {
   estCourante: boolean;
   termine?: boolean;
   typeContenu: "problematique" | "cours" | "exempleExpert" | "exercice" | "recompense";
+  onPhaseAttente?: (phase: PhaseAttente | null) => void;
 }
 
 export function BarreActionsCycle({
@@ -27,6 +30,7 @@ export function BarreActionsCycle({
   estCourante,
   termine = false,
   typeContenu,
+  onPhaseAttente,
 }: BarreActionsCycleProps) {
   const router = useRouter();
   const [enCours, startTransition] = useTransition();
@@ -46,8 +50,6 @@ export function BarreActionsCycle({
       return;
     }
     router.push(urlEtape(objectifId, resultat.notionId, resultat.etape));
-    // Rafraîchit le layout (sidebar) qui n'est pas re-fetché lors d'une
-    // navigation entre segments frères.
     router.refresh();
   }
 
@@ -61,9 +63,14 @@ export function BarreActionsCycle({
         <Bouton
           enCours={enCours}
           onClick={() => {
+            onPhaseAttente?.(phasePourAvancerCycle(typeContenu));
             startTransition(async () => {
-              const resultat = await avancerCycle(objectifId);
-              naviguerVers(resultat);
+              try {
+                const resultat = await avancerCycle(objectifId);
+                naviguerVers(resultat);
+              } finally {
+                onPhaseAttente?.(null);
+              }
             });
           }}
         >
@@ -79,9 +86,14 @@ export function BarreActionsCycle({
         <Bouton
           enCours={enCours}
           onClick={() => {
+            onPhaseAttente?.("notionSuivante");
             startTransition(async () => {
-              const resultat = await notionSuivante(objectifId);
-              naviguerVers(resultat);
+              try {
+                const resultat = await notionSuivante(objectifId);
+                naviguerVers(resultat);
+              } finally {
+                onPhaseAttente?.(null);
+              }
             });
           }}
         >
@@ -97,9 +109,14 @@ export function BarreActionsCycle({
 interface BarreActionsExerciceProps {
   objectifId: string;
   estCourante: boolean;
+  onPhaseAttente?: (phase: PhaseAttente | null) => void;
 }
 
-export function useActionsExercice({ objectifId, estCourante }: BarreActionsExerciceProps) {
+export function useActionsExercice({
+  objectifId,
+  estCourante,
+  onPhaseAttente,
+}: BarreActionsExerciceProps) {
   const router = useRouter();
   const [enCours, startTransition] = useTransition();
 
@@ -107,10 +124,15 @@ export function useActionsExercice({ objectifId, estCourante }: BarreActionsExer
     if (!estCourante) {
       return;
     }
+    onPhaseAttente?.("correctionExercice");
     startTransition(async () => {
-      const resultat = await repondreExercice(objectifId, texte);
-      router.push(urlEtape(objectifId, resultat.notionId, resultat.etape));
-      router.refresh();
+      try {
+        const resultat = await repondreExercice(objectifId, texte);
+        router.push(urlEtape(objectifId, resultat.notionId, resultat.etape));
+        router.refresh();
+      } finally {
+        onPhaseAttente?.(null);
+      }
     });
   }
 

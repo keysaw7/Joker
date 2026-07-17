@@ -1,6 +1,10 @@
 import type { Domaine } from "./domaine";
 import type { Objectif } from "./objectif";
-import type { ProfilApprenant, ReponseDiagnostic } from "./profil";
+import type {
+  EstimationNiveau,
+  ProfilApprenant,
+  ReponseDiagnostic,
+} from "./profil";
 import type { Roadmap } from "./roadmap";
 
 /**
@@ -14,4 +18,5 @@ export interface ContexteApprentissage {
   readonly roadmap: Roadmap | null;
   readonly notionCouranteId: string | null;
   readonly reponsesDiagnostic: readonly ReponseDiagnostic[];
+  readonly estimationNiveau: EstimationNiveau | null;
 }

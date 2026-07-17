@@ -31,11 +31,13 @@ function creerContexte(
       erreursFrequentes: [],
       preferencesPedagogiques: [],
       notionsMaitrisees: [],
+      niveauEstime: null,
       miseAJour: "2026-01-01T00:00:00.000Z",
     },
     roadmap,
     notionCouranteId: null,
     reponsesDiagnostic: [],
+    estimationNiveau: null,
     ...overrides,
   };
 }
@@ -124,6 +126,17 @@ describe("OrchestrateurCycle", () => {
     if (etat.contenu.type === "recompense") {
       expect(etat.contenu.correctionPrecedente).toBeDefined();
     }
+  });
+
+  it("initialise le guidage des exercices selon le niveau diagnostic", async () => {
+    const orchestrateur = new OrchestrateurCycle(creerDependancesCycleMock());
+    const base = creerContexte(roadmapSimple);
+    const contexte = creerContexte(roadmapSimple, {
+      profil: { ...base.profil, niveauEstime: 80 },
+    });
+
+    const etat = await avancerJusquAuxExercices(orchestrateur, contexte);
+    expect(etat.etatExercices?.guidageActuel).toBe("autonome");
   });
 
   it("rejette demarrer sans roadmap", async () => {

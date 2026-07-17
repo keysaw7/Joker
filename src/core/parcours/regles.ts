@@ -16,6 +16,7 @@ export function profilInitial(objectifId: string): ProfilApprenant {
     erreursFrequentes: [],
     preferencesPedagogiques: [],
     notionsMaitrisees: [],
+    niveauEstime: null,
     miseAJour: new Date().toISOString(),
   };
 }
@@ -32,6 +33,7 @@ export function contexteInitial(
     roadmap: null,
     notionCouranteId: null,
     reponsesDiagnostic: [],
+    estimationNiveau: null,
   };
 }
 

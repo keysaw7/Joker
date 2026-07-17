@@ -11,9 +11,7 @@ import type {
   PlanCours,
   Problematique,
   ProfilApprenant,
-  QuestionDiagnostic,
   ReponseApprenant,
-  Roadmap,
   SpecGraphique,
 } from "@/core/domain";
 import type {
@@ -59,52 +57,80 @@ export interface OptionsCapacitesMock {
 }
 
 function planCoursMock(notion: Notion): PlanCours {
+  const paragrapheDense =
+    "Pour deux portions, on part en général de **300 g de farine**. " +
+    "L'hydratation se calcule en pourcentage : eau ÷ farine × 100. " +
+    "Une pâte standard se situe souvent entre **60 % et 70 %**, soit **180 à 210 g d'eau** pour 300 g de farine. " +
+    "Ajoute environ **6 g de sel** (2 % du poids de farine) et **3 à 4 g de levure** sèche selon le temps de repos. " +
+    "Pèse tes ingrédients : c'est la base d'une pâte régulière et reproductible.";
+
   const intentions: IntentionBloc[] = [
     {
       type: "texte",
-      markdown: `# ${notion.titre}\n\nDécouvrons cette notion étape par étape, avec des supports variés.`,
+      markdown: `## ${notion.titre}\n\n${paragrapheDense}`,
     },
     {
       type: "encadre",
       variante: "astuce",
-      titre: "Pourquoi c'est utile",
-      markdown: "Cette notion te permet d'aller plus loin dans ton objectif.",
+      titre: "Pour ton objectif",
+      markdown:
+        "Note tes ratios sur une fiche près du plan de travail : farine, eau, sel, levure. " +
+        "Tu ajustes ensuite l'hydratation selon la farine et le temps de fermentation disponible.",
     },
     {
       type: "analogie",
       source: "une recette de cuisine",
       cible: notion.titre,
-      explication: "Comme en cuisine, chaque étape s'appuie sur la précédente.",
+      explication:
+        "Comme pour une recette, un petit écart sur l'eau change la texture : trop sèche, la pâte se déchire ; trop hydratée, elle colle.",
     },
     {
       type: "schema",
-      briefMedia: `Schéma du processus lié à « ${notion.titre} »`,
-      legende: "Vue d'ensemble",
+      briefMedia: `Flowchart : pesée farine → calcul eau selon hydratation % → ajout sel et levure → repos → étalage → cuisson, pour « ${notion.titre} »`,
+      legende: "Enchaînement des étapes clés",
     },
     {
       type: "graphique",
-      briefMedia: `Évolution de la compréhension de « ${notion.titre} »`,
-      legende: "Progression type",
+      briefMedia: `Barres comparant hydratation 55 %, 65 % et 75 % : maniabilité et alvéolage pour « ${notion.titre} »`,
+      legende: "Effet de l'hydratation sur la pâte",
     },
     {
       type: "image",
-      briefMedia: `Illustration pédagogique claire de « ${notion.titre} »`,
-      alt: `Illustration de ${notion.titre}`,
+      briefMedia: `Plan de travail avec balance, bol de pâte et ingrédients étiquetés pour « ${notion.titre} »`,
+      alt: `Illustration des quantités pour ${notion.titre}`,
     },
     {
       type: "etapes",
       etapes: [
-        { titre: "Observer", markdown: "Identifie le problème concret." },
-        { titre: "Comprendre", markdown: "Relie la notion à ce que tu sais déjà." },
-        { titre: "Appliquer", markdown: "Teste sur un exemple simple." },
+        {
+          titre: "Peser la farine",
+          markdown: "300 g pour deux portions. C'est la référence pour tous les autres calculs.",
+        },
+        {
+          titre: "Calculer l'eau",
+          markdown: "65 % d'hydratation → 195 g d'eau. Mélange progressivement jusqu'à incorporation homogène.",
+        },
+        {
+          titre: "Repos et cuisson",
+          markdown:
+            "Laisse reposer au moins 30 min à température ambiante, étale finement, puis cuisson forte (pierre ou plaque préchauffée).",
+        },
       ],
     },
     {
+      type: "texte",
+      markdown:
+        "## À retenir\n\n" +
+        "Fixe d'abord la farine, choisis ton **pourcentage d'hydratation**, puis déduis eau, sel et levure. " +
+        "Tu peux reproduire la même pâte en adaptant seulement le temps de repos.",
+    },
+    {
       type: "quizFlash",
-      question: `Quelle est l'idée centrale de « ${notion.titre} » ?`,
-      options: ["Une formule à mémoriser", "Un raisonnement à comprendre", "Une exception rare"],
+      question: `Quelle plage d'hydratation est typique pour une pâte à pizza standard ?`,
+      options: ["50–55 %", "60–70 %", "75–85 %", "90 %"],
       bonneReponse: 1,
-      explication: "L'objectif est de **comprendre**, pas seulement mémoriser.",
+      explication:
+        "Entre **60 % et 70 %**, la pâte reste maniable tout en développant une bonne structure à la cuisson.",
     },
   ];
 
@@ -177,28 +203,41 @@ export function creerCapacitesMock(options: OptionsCapacitesMock = {}): {
   adaptation: Adaptation;
 } {
   const diagnostic: Diagnostic = {
-    async genererQuestions(): Promise<QuestionDiagnostic[]> {
-      return Array.from({ length: 5 }, (_, index) => ({
+    async genererQuestion(contexte, params) {
+      const index = contexte.reponsesDiagnostic.length;
+      const competenceId = `comp-mock-${index + 1}`;
+      return {
         id: prochainId("q"),
-        intitule: `Question de diagnostic ${index + 1} (mock)`,
-      }));
+        intitule: `Question diagnostic ${index + 1} (mock, diff. ${params.difficulteCible})`,
+        competenceId,
+        competenceLibelle: `Compétence mock ${index + 1}`,
+        difficulte: params.difficulteCible,
+      };
+    },
+    async evaluerReponse(_contexte, question) {
+      return {
+        questionId: question.id,
+        maitrise: "maitrise",
+        justification: "Réponse mock évaluée comme maîtrisée.",
+      };
     },
     async construireProfil(contexte): Promise<ProfilApprenant> {
       return {
         objectifId: contexte.objectif.id,
-        acquis: [],
-        competences: [],
+        acquis: ["Base mock"],
+        competences: ["Raisonnement mock"],
         lacunes: [],
         erreursFrequentes: [],
         preferencesPedagogiques: [],
         notionsMaitrisees: [],
+        niveauEstime: contexte.estimationNiveau?.scoreGlobal ?? null,
         miseAJour: new Date().toISOString(),
       };
     },
   };
 
   const planification: PlanificationPedagogique = {
-    async genererRoadmap(contexte): Promise<Roadmap> {
+    async genererRoadmap(contexte) {
       const nombre = options.nombreNotions ?? 1;
       const notions: Notion[] = [];
       for (let i = 0; i < nombre; i++) {
@@ -216,7 +255,8 @@ export function creerCapacitesMock(options: OptionsCapacitesMock = {}): {
           ],
         });
       }
-      return { objectifId: contexte.objectif.id, version: 1, notions };
+      const roadmap = { objectifId: contexte.objectif.id, version: 1, notions };
+      return { roadmap, notionsPreMaitrisees: [] };
     },
   };
 
@@ -335,7 +375,8 @@ export function creerCapacitesMock(options: OptionsCapacitesMock = {}): {
   const adaptation: Adaptation = {
     async adapter(contexte): Promise<ResultatAdaptation> {
       const roadmap =
-        contexte.roadmap ?? (await planification.genererRoadmap(contexte));
+        contexte.roadmap ??
+        (await planification.genererRoadmap(contexte)).roadmap;
       return { profil: contexte.profil, roadmap };
     },
   };

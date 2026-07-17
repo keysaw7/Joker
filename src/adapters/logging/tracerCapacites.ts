@@ -44,9 +44,13 @@ export function tracerCapacites<T extends CapacitesTracees>(capacites: T): T {
   return {
     ...capacites,
     diagnostic: {
-      genererQuestions: (contexte) =>
-        tracerAppel("diagnostic.genererQuestions", () =>
-          capacites.diagnostic.genererQuestions(contexte),
+      genererQuestion: (contexte, params) =>
+        tracerAppel("diagnostic.genererQuestion", () =>
+          capacites.diagnostic.genererQuestion(contexte, params),
+        ),
+      evaluerReponse: (contexte, question, reponse) =>
+        tracerAppel("diagnostic.evaluerReponse", () =>
+          capacites.diagnostic.evaluerReponse(contexte, question, reponse),
         ),
       construireProfil: (contexte) =>
         tracerAppel("diagnostic.construireProfil", () =>

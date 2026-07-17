@@ -250,6 +250,12 @@ export const SELECTION_DEFAUT_IMAGE: SelectionModele = {
   modele: "imagen-4.0-fast-generate-001",
 };
 
+/** Sélection par défaut pour la transcription vocale (saisie au micro). */
+export const SELECTION_DEFAUT_TRANSCRIPTION: SelectionModele = {
+  fournisseur: "openai",
+  modele: "gpt-4o-mini-transcribe",
+};
+
 export function trouverFournisseur(id: IdFournisseur): FournisseurIA | undefined {
   return FOURNISSEURS.find((f) => f.id === id);
 }

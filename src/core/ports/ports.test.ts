@@ -23,11 +23,13 @@ function creerContexte(
       erreursFrequentes: [],
       preferencesPedagogiques: [],
       notionsMaitrisees: [],
+      niveauEstime: null,
       miseAJour: "2026-01-01T00:00:00.000Z",
     },
     roadmap: null,
     notionCouranteId: null,
     reponsesDiagnostic: [],
+    estimationNiveau: null,
     ...overrides,
   };
 }
@@ -37,26 +39,42 @@ describe("ports — contrats implémentables hors ligne", () => {
   const source = creerSourceFallback();
   const persistance = creerPersistanceMemoire();
 
-  it("Diagnostic génère 5 questions puis construit un profil", async () => {
+  it("Diagnostic génère une question puis évalue et construit un profil", async () => {
     const contexte = creerContexte();
-    const questions = await capacites.diagnostic.genererQuestions(contexte);
-    expect(questions).toHaveLength(5);
-    expect(questions[0]?.id).toBeTruthy();
-    expect(questions[0]?.intitule).toBeTruthy();
+    const question = await capacites.diagnostic.genererQuestion(contexte, {
+      difficulteCible: 3,
+      competencesDejaCouvertes: [],
+      estimation: null,
+    });
+    expect(question.id).toBeTruthy();
+    expect(question.intitule).toBeTruthy();
+    expect(question.competenceId).toBeTruthy();
+
+    const reponse = { questionId: question.id, reponse: "réponse test" };
+    const evaluation = await capacites.diagnostic.evaluerReponse(
+      contexte,
+      question,
+      reponse,
+    );
+    expect(evaluation.maitrise).toBeTruthy();
 
     const contexteAvecReponses = creerContexte({
-      reponsesDiagnostic: questions.map((question, index) => ({
-        questionId: question.id,
-        reponse: `réponse ${index + 1}`,
-      })),
+      reponsesDiagnostic: [reponse],
+      estimationNiveau: {
+        scoreGlobal: 60,
+        competences: [],
+        confiance: 0.5,
+        evaluations: [evaluation],
+      },
     });
 
     const profil = await capacites.diagnostic.construireProfil(contexteAvecReponses);
     expect(profil.objectifId).toBe("obj-1");
+    expect(profil.niveauEstime).toBe(60);
   });
 
   it("PlanificationPedagogique génère une roadmap avec au moins une notion", async () => {
-    const roadmap = await capacites.planification.genererRoadmap(creerContexte());
+    const { roadmap } = await capacites.planification.genererRoadmap(creerContexte());
     expect(roadmap.objectifId).toBe("obj-1");
     expect(roadmap.notions.length).toBeGreaterThanOrEqual(1);
     expect(roadmap.notions[0]?.criteresDeMaitrise.length).toBeGreaterThanOrEqual(1);
@@ -64,7 +82,7 @@ describe("ports — contrats implémentables hors ligne", () => {
 
   it("ConcepteurDeCours compose un cours riche via le mock", async () => {
     const contexte = creerContexte();
-    const roadmap = await capacites.planification.genererRoadmap(contexte);
+    const { roadmap } = await capacites.planification.genererRoadmap(contexte);
     const notion = roadmap.notions[0]!;
 
     const cours = await capacites.concepteurDeCours.composerCours(contexte, notion);
@@ -77,7 +95,7 @@ describe("ports — contrats implémentables hors ligne", () => {
 
   it("GenerateurDeContenu produit les trois étapes du Cycle", async () => {
     const contexte = creerContexte();
-    const roadmap = await capacites.planification.genererRoadmap(contexte);
+    const { roadmap } = await capacites.planification.genererRoadmap(contexte);
     const notion = roadmap.notions[0]!;
 
     const problematique = await capacites.generateurContenu.genererProblematique(contexte, notion);
@@ -92,7 +110,7 @@ describe("ports — contrats implémentables hors ligne", () => {
 
   it("boucle exercice → analyse → correction → remédiation", async () => {
     const contexte = creerContexte();
-    const roadmap = await capacites.planification.genererRoadmap(contexte);
+    const { roadmap } = await capacites.planification.genererRoadmap(contexte);
     const notion = roadmap.notions[0]!;
 
     const exercice = await capacites.generateurExercices.genererExercice(
@@ -118,7 +136,12 @@ describe("ports — contrats implémentables hors ligne", () => {
 
   it("Adaptation fait évoluer profil et roadmap", async () => {
     const contexte = creerContexte();
-    const resultat = await capacites.adaptation.adapter(contexte);
+    const { roadmap: roadmapInitiale } =
+      await capacites.planification.genererRoadmap(contexte);
+    const resultat = await capacites.adaptation.adapter({
+      ...contexte,
+      roadmap: roadmapInitiale,
+    });
     expect(resultat.profil.objectifId).toBe("obj-1");
     expect(resultat.roadmap.notions.length).toBeGreaterThanOrEqual(1);
   });
@@ -134,7 +157,7 @@ describe("ports — contrats implémentables hors ligne", () => {
     await persistance.sauvegarderProfil(profil);
     expect(await persistance.chargerProfil("obj-1")).toEqual(profil);
 
-    const roadmap = await capacites.planification.genererRoadmap(contexte);
+    const { roadmap } = await capacites.planification.genererRoadmap(contexte);
     await persistance.sauvegarderRoadmap(roadmap);
     expect(await persistance.chargerRoadmap("obj-1")).toEqual(roadmap);
 

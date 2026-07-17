@@ -1,11 +1,17 @@
 export type { Domaine } from "./domaine";
 export type { Objectif } from "./objectif";
 export type {
+  CompetenceEstimee,
+  DifficulteDiagnostic,
+  EstimationNiveau,
+  EvaluationDiagnostic,
   Lacune,
+  MaitriseDiagnostic,
   ProfilApprenant,
   QuestionDiagnostic,
   ReponseDiagnostic,
 } from "./profil";
+export type { EntreeHistoriqueDiagnostic } from "./parcours";
 export type { CritereDeMaitrise, Notion, Roadmap } from "./roadmap";
 export {
   TYPES_BLOC_EXEMPLE_EXPERT,

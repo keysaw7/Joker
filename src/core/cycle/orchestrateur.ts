@@ -27,6 +27,7 @@ import {
   prochainGuidage,
   selectionnerNotionCourante,
 } from "./regles";
+import { guidageInitialDepuisScore } from "@/core/parcours/reglesDiagnostic";
 
 export interface DependancesOrchestrateur {
   generateurContenu: GenerateurDeContenu;
@@ -93,14 +94,17 @@ export class OrchestrateurCycle {
         };
       }
       case "exempleExpert": {
+        const guidageInitial = guidageInitialDepuisScore(
+          contexte.profil.niveauEstime ?? 0,
+        );
         const exercice = await this.deps.generateurExercices.genererExercice(
           contexte,
           notion,
-          GUIDAGE_INITIAL,
+          guidageInitial,
         );
         const etatExercices: EtatExercices = {
           exerciceCourant: exercice,
-          guidageActuel: GUIDAGE_INITIAL,
+          guidageActuel: guidageInitial,
           lacuneActive: null,
         };
         return {

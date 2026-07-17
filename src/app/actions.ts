@@ -6,13 +6,13 @@ import { avecTrace } from "@/adapters/logging/contexteTrace";
 import type {
   EtapeCycle,
   ProfilEleve,
-  ReponseDiagnostic,
   ResumeSession,
   SessionPersistee,
 } from "@/core/domain";
 import { construireProfilEleve } from "@/core/profil-eleve/agregation";
 import { trouverDomaine, DOMAINES } from "./_data/domaines";
 import { creerCycle, creerParcours, persistanceCourante } from "./_serveur/moteur";
+import { transcrireAudioServeur } from "./_serveur/transcription";
 import {
   enregistrerSnapshotCycle,
   enregistrerSnapshotParcours,
@@ -76,12 +76,41 @@ export async function demarrerParcours(
   );
 }
 
-export async function finaliserDiagnostic(
-  objectifId: string,
-  reponses: readonly ReponseDiagnostic[],
-): Promise<void> {
+export interface ResultatReponseDiagnosticClient {
+  readonly termine: boolean;
+  readonly question?: import("@/core/domain").QuestionDiagnostic;
+  readonly questionsPosees: number;
+}
+
+export async function transcrireAudio(
+  formData: FormData,
+): Promise<{ texte: string }> {
   return avecTrace(
-    "finaliserDiagnostic",
+    "transcrireAudio",
+    async () => {
+      await exigerUtilisateurCourant();
+      const fichier = formData.get("audio");
+      if (!(fichier instanceof Blob) || fichier.size === 0) {
+        throw new Error("Audio manquant ou vide");
+      }
+      const mediaType =
+        (formData.get("mediaType") as string | null)?.trim() || fichier.type;
+      const langue =
+        (formData.get("langue") as string | null)?.trim() || undefined;
+      const buffer = new Uint8Array(await fichier.arrayBuffer());
+      const texte = await transcrireAudioServeur(buffer, mediaType, langue);
+      return { texte };
+    },
+    {},
+  );
+}
+
+export async function repondreDiagnostic(
+  objectifId: string,
+  reponse: string,
+): Promise<ResultatReponseDiagnosticClient> {
+  return avecTrace(
+    "repondreDiagnostic",
     async () => {
       const session = await chargerSession(objectifId);
       if (!session.etatParcours) {
@@ -89,16 +118,21 @@ export async function finaliserDiagnostic(
       }
 
       const orchestrateur = await creerParcours(SELECTION_DEFAUT);
-      const nouvelEtat = await orchestrateur.finaliserDiagnostic(
+      const resultat = await orchestrateur.repondre(
         session.etatParcours,
-        reponses,
+        reponse,
       );
-      await enregistrerSnapshotParcours(nouvelEtat);
+      await enregistrerSnapshotParcours(resultat.etat);
+
+      return {
+        termine: resultat.termine,
+        question: resultat.termine
+          ? undefined
+          : (resultat.etat.questionCourante ?? undefined),
+        questionsPosees: resultat.etat.questionsPosees,
+      };
     },
-    {
-      objectifId,
-      reponses: reponses.length,
-    },
+    { objectifId },
   );
 }
 

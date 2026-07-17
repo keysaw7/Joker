@@ -1,46 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import type { QuestionDiagnostic, ReponseDiagnostic } from "@/core/domain";
+import type { QuestionDiagnostic } from "@/core/domain";
 import { Bouton } from "./Bouton";
 import { Carte } from "./Carte";
 import { ZoneTexte } from "./ZoneTexte";
 
 interface EcranDiagnosticProps {
-  questions: readonly QuestionDiagnostic[];
-  onTerminer: (reponses: readonly ReponseDiagnostic[]) => void;
+  question: QuestionDiagnostic;
+  questionsPosees: number;
+  maxQuestions: number;
+  onValider: (texte: string) => void;
 }
 
-export function EcranDiagnostic({ questions, onTerminer }: EcranDiagnosticProps) {
-  const [index, setIndex] = useState(0);
-  const [reponses, setReponses] = useState<ReponseDiagnostic[]>([]);
+export function EcranDiagnostic({
+  question,
+  questionsPosees,
+  maxQuestions,
+  onValider,
+}: EcranDiagnosticProps) {
   const [reponse, setReponse] = useState("");
-
-  const questionCourante = questions[index];
-  const derniereQuestion = index + 1 >= questions.length;
-
-  if (!questionCourante) {
-    return null;
-  }
+  const numeroQuestion = questionsPosees + 1;
 
   function valider() {
-    const courante = questions[index];
-    if (!courante) return;
-
-    const nouvelleReponse: ReponseDiagnostic = {
-      questionId: courante.id,
-      reponse: reponse.trim(),
-    };
-    const nouvellesReponses = [...reponses, nouvelleReponse];
+    const texte = reponse.trim();
+    if (!texte) return;
     setReponse("");
-
-    if (derniereQuestion) {
-      onTerminer(nouvellesReponses);
-      return;
-    }
-
-    setReponses(nouvellesReponses);
-    setIndex((courant) => courant + 1);
+    onValider(texte);
   }
 
   return (
@@ -49,16 +35,17 @@ export function EcranDiagnostic({ questions, onTerminer }: EcranDiagnosticProps)
         <p className="text-sm font-medium text-accent">Diagnostic</p>
         <h1 className="text-2xl font-semibold">Comprendre ton niveau</h1>
         <p className="text-texte-secondaire">
-          Quelques questions pour personnaliser ton parcours. Pas de note, juste une
-          meilleure compréhension de là où tu en es.
+          Des questions adaptées à tes réponses pour personnaliser ton parcours.
+          Pas de note affichée — juste une meilleure compréhension de là où tu en
+          es.
         </p>
         <p className="text-sm text-texte-secondaire">
-          Question {index + 1} / {questions.length}
+          Question {numeroQuestion} (jusqu&apos;à {maxQuestions})
         </p>
       </header>
 
       <Carte>
-        <p className="mb-4 text-lg leading-relaxed">{questionCourante.intitule}</p>
+        <p className="mb-4 text-lg leading-relaxed">{question.intitule}</p>
         <ZoneTexte
           label="Ta réponse"
           placeholder="Réponds librement…"

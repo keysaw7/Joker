@@ -25,6 +25,7 @@ function etatCycle(overrides: Partial<EtatCycle> = {}): EtatCycle {
         erreursFrequentes: [],
         preferencesPedagogiques: [],
         notionsMaitrisees: [],
+      niveauEstime: null,
         miseAJour: "2026-01-01",
       },
       roadmap: {
@@ -37,6 +38,7 @@ function etatCycle(overrides: Partial<EtatCycle> = {}): EtatCycle {
       },
       notionCouranteId: "n1",
       reponsesDiagnostic: [],
+      estimationNiveau: null,
     },
     etape: "problematique",
     contenu: {

@@ -5,6 +5,7 @@ import {
 } from "@/adapters/ai/mock/capacitesMock";
 import { creerPersistanceMemoire } from "@/adapters/persistence/memoire";
 import { OrchestrateurCycle } from "@/core/cycle/orchestrateur";
+import { MIN_QUESTIONS } from "@/core/parcours/reglesDiagnostic";
 import { OrchestrateurParcours } from "@/core/parcours/orchestrateurParcours";
 
 const domaine = { id: "maths", nom: "Mathématiques" };
@@ -15,13 +16,21 @@ const objectif = {
   creeLe: "2026-01-01T00:00:00.000Z",
 };
 
-function reponsesPourQuestions(
-  questions: readonly { id: string }[],
-): { questionId: string; reponse: string }[] {
-  return questions.map((question, index) => ({
-    questionId: question.id,
-    reponse: `réponse ${index + 1}`,
-  }));
+async function menerDiagnosticComplet(
+  parcours: OrchestrateurParcours,
+): Promise<import("@/core/domain").EtatParcours> {
+  let etat = await parcours.demarrer(domaine, objectif);
+  expect(etat.phase).toBe("diagnostic");
+  expect(etat.questionCourante).not.toBeNull();
+
+  for (let i = 0; i < MIN_QUESTIONS + 2; i++) {
+    const resultat = await parcours.repondre(etat, `réponse mock ${i + 1}`);
+    etat = resultat.etat;
+    if (resultat.termine) {
+      return etat;
+    }
+  }
+  throw new Error("Diagnostic mock n'a pas terminé à temps");
 }
 
 describe("OrchestrateurParcours", () => {
@@ -29,92 +38,67 @@ describe("OrchestrateurParcours", () => {
     reinitialiserCompteurMock();
   });
 
-  it("demarrer lance le diagnostic avec 5 questions pré-générées", async () => {
-    const capacites = creerCapacitesMock();
-    const parcours = new OrchestrateurParcours(capacites);
+  it("demarrer lance le diagnostic avec une première question", async () => {
+    const parcours = new OrchestrateurParcours(creerCapacitesMock());
 
     const etat = await parcours.demarrer(domaine, objectif);
     expect(etat.phase).toBe("diagnostic");
-    expect(etat.questions).toHaveLength(5);
+    expect(etat.questionCourante).not.toBeNull();
+    expect(etat.questionsPosees).toBe(0);
     expect(etat.contexte.reponsesDiagnostic).toHaveLength(0);
     expect(etat.contexte.roadmap).toBeNull();
   });
 
-  it("finalise le diagnostic avec 5 réponses et produit un contexte prêt", async () => {
-    const capacites = creerCapacitesMock();
-    const parcours = new OrchestrateurParcours(capacites);
-
-    const etatInitial = await parcours.demarrer(domaine, objectif);
-    const etat = await parcours.finaliserDiagnostic(
-      etatInitial,
-      reponsesPourQuestions(etatInitial.questions),
-    );
+  it("termine le diagnostic adaptatif et produit un contexte prêt", async () => {
+    const parcours = new OrchestrateurParcours(creerCapacitesMock());
+    const etat = await menerDiagnosticComplet(parcours);
 
     expect(etat.phase).toBe("pret");
-    expect(etat.questions).toHaveLength(0);
+    expect(etat.questionCourante).toBeNull();
     expect(etat.contexte.roadmap).not.toBeNull();
     expect(etat.contexte.profil.objectifId).toBe("obj-1");
-    expect(etat.contexte.reponsesDiagnostic).toHaveLength(5);
-  });
-
-  it("rejette des réponses pour des questions différentes", async () => {
-    const parcours = new OrchestrateurParcours(creerCapacitesMock());
-    const etat = await parcours.demarrer(domaine, objectif);
-
-    await expect(
-      parcours.finaliserDiagnostic(etat, [
-        { questionId: "q-invalide", reponse: "réponse" },
-      ]),
-    ).rejects.toThrow("Nombre de réponses incorrect");
-  });
-
-  it("rejette finaliserDiagnostic en phase pret", async () => {
-    const parcours = new OrchestrateurParcours(creerCapacitesMock());
-    const etatInitial = await parcours.demarrer(domaine, objectif);
-    const etat = await parcours.finaliserDiagnostic(
-      etatInitial,
-      reponsesPourQuestions(etatInitial.questions),
+    expect(etat.contexte.profil.niveauEstime).not.toBeNull();
+    expect(etat.contexte.reponsesDiagnostic.length).toBeGreaterThanOrEqual(MIN_QUESTIONS);
+    expect(etat.contexte.estimationNiveau?.evaluations.length).toBeGreaterThanOrEqual(
+      MIN_QUESTIONS,
     );
+  });
+
+  it("rejette repondre en phase pret", async () => {
+    const parcours = new OrchestrateurParcours(creerCapacitesMock());
+    const etat = await menerDiagnosticComplet(parcours);
     expect(etat.phase).toBe("pret");
 
-    await expect(
-      parcours.finaliserDiagnostic(etat, [{ questionId: "q-1", reponse: "trop tard" }]),
-    ).rejects.toThrow("finaliserDiagnostic n'est disponible qu'en phase diagnostic");
+    await expect(parcours.repondre(etat, "trop tard")).rejects.toThrow(
+      "repondre n'est disponible qu'en phase diagnostic",
+    );
   });
 
-  it("persiste objectif, profil et roadmap au passage en phase pret", async () => {
+  it("persiste objectif, profil, roadmap et niveau domaine au passage en phase pret", async () => {
     const capacites = creerCapacitesMock();
     const persistance = creerPersistanceMemoire();
     const parcours = new OrchestrateurParcours({ ...capacites, persistance });
 
-    const etatInitial = await parcours.demarrer(domaine, objectif);
-    await parcours.finaliserDiagnostic(
-      etatInitial,
-      reponsesPourQuestions(etatInitial.questions),
-    );
+    await menerDiagnosticComplet(parcours);
 
     const profil = await persistance.chargerProfil("obj-1");
     const roadmap = await persistance.chargerRoadmap("obj-1");
     const objectifs = await persistance.chargerObjectifs("maths");
+    const profilEleve = await persistance.chargerProfilEleve();
     expect(profil).not.toBeNull();
     expect(roadmap).not.toBeNull();
-    expect(objectifs).toHaveLength(1);
+    expect(objectifs.some((o) => o.id === "obj-1")).toBe(true);
+    expect(profilEleve?.niveauxParDomaine.maths).toBeGreaterThan(0);
   });
 
-  it("handshake : le contexte pret est accepté par OrchestrateurCycle", async () => {
+  it("le contexte pret est accepté par OrchestrateurCycle", async () => {
     const capacites = creerCapacitesMock();
     const parcours = new OrchestrateurParcours(capacites);
+    const etatParcours = await menerDiagnosticComplet(parcours);
+
     const cycle = new OrchestrateurCycle(capacites);
-
-    const etatInitial = await parcours.demarrer(domaine, objectif);
-    const etatParcours = await parcours.finaliserDiagnostic(
-      etatInitial,
-      reponsesPourQuestions(etatInitial.questions),
-    );
-
     const etatCycle = await cycle.demarrer(etatParcours.contexte);
     expect(etatCycle.etape).toBe("problematique");
     expect(etatCycle.contexte.roadmap).not.toBeNull();
-    expect(etatCycle.termine).toBe(false);
   });
 });

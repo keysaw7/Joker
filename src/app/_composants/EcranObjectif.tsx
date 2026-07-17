@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { placeholderObjectif } from "@/app/_data/domaines";
 import type { Domaine, ResumeSession, StatutSession } from "@/core/domain";
+import { EcranAttente } from "./attente/EcranAttente";
 import { Bouton } from "./Bouton";
 import { Carte } from "./Carte";
 import { ZoneTexte } from "./ZoneTexte";
@@ -10,7 +11,10 @@ import { ZoneTexte } from "./ZoneTexte";
 interface EcranObjectifProps {
   domaine: Domaine;
   sessions: readonly ResumeSession[];
+  /** @deprecated Utiliser demarrageEnCours */
   enCours?: boolean;
+  demarrageEnCours?: boolean;
+  suppressionEnCours?: boolean;
   sessionEnSuppression?: string | null;
   onCommencer: (intitule: string) => void;
   onReprendre: (objectifId: string) => void;
@@ -53,6 +57,8 @@ export function EcranObjectif({
   domaine,
   sessions,
   enCours = false,
+  demarrageEnCours = false,
+  suppressionEnCours: suppressionEnCoursProp = false,
   sessionEnSuppression = null,
   onCommencer,
   onReprendre,
@@ -61,6 +67,10 @@ export function EcranObjectif({
 }: EcranObjectifProps) {
   const [intitule, setIntitule] = useState("");
   const [sessionAConfirmer, setSessionAConfirmer] = useState<string | null>(null);
+
+  if (demarrageEnCours) {
+    return <EcranAttente phase="demarrageDiagnostic" />;
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-8">
@@ -81,7 +91,8 @@ export function EcranObjectif({
             {sessions.map((session) => {
               const progression = formaterProgression(session);
               const enConfirmation = sessionAConfirmer === session.objectif.id;
-              const suppressionEnCours = sessionEnSuppression === session.objectif.id;
+              const suppressionEnCours =
+                suppressionEnCoursProp && sessionEnSuppression === session.objectif.id;
 
               return (
                 <li key={session.objectif.id}>
@@ -174,13 +185,13 @@ export function EcranObjectif({
       </section>
 
       <div className="flex gap-3">
-        <Bouton variante="secondaire" onClick={onRetour} disabled={enCours}>
+        <Bouton variante="secondaire" onClick={onRetour} disabled={enCours || demarrageEnCours}>
           Retour
         </Bouton>
         <Bouton
           onClick={() => onCommencer(intitule)}
           disabled={!intitule.trim()}
-          enCours={enCours}
+          enCours={enCours || demarrageEnCours}
         >
           Commencer
         </Bouton>

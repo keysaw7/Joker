@@ -61,7 +61,7 @@ export async function enrichirIntention(
       } catch {
         return {
           type: "texte",
-          markdown: `> Schéma indisponible.\n\n${intention.briefMedia}`,
+          markdown: `> Schéma indisponible.\n\n${intention.briefMedia}${intention.legende ? `\n\n*${intention.legende}*` : ""}`,
         };
       }
     }
@@ -106,7 +106,7 @@ export async function enrichirIntention(
       } catch {
         return {
           type: "texte",
-          markdown: `> Illustration indisponible.\n\n*${intention.alt}*`,
+          markdown: `> Illustration indisponible.\n\n${intention.briefMedia}\n\n*${intention.alt}*`,
         };
       }
     }

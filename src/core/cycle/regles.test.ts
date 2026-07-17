@@ -49,6 +49,7 @@ function profil(overrides: Partial<ProfilApprenant> = {}): ProfilApprenant {
     erreursFrequentes: [],
     preferencesPedagogiques: [],
     notionsMaitrisees: [],
+    niveauEstime: null,
     miseAJour: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
@@ -159,11 +160,13 @@ describe("regles — logique pure du cycle", () => {
         erreursFrequentes: [],
         preferencesPedagogiques: [],
         notionsMaitrisees: [],
+    niveauEstime: null,
         miseAJour: "2026",
       },
       roadmap: null,
       notionCouranteId: null,
       reponsesDiagnostic: [],
+      estimationNiveau: null,
     };
     const misAJour = mettreAJourContexte(ctx, { notionCouranteId: "n1" });
     expect(misAJour.notionCouranteId).toBe("n1");

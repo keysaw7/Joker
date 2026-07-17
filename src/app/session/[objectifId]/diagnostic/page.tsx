@@ -14,13 +14,16 @@ export default async function PageDiagnostic({
     notFound();
   }
 
-  if (session.statut !== "diagnostic" || !session.etatParcours) {
+  if (session.statut !== "diagnostic" || !session.etatParcours?.questionCourante) {
     redirect(`/session/${objectifId}`);
   }
 
   return (
     <div className="contenu-large">
-      <ClientDiagnostic questions={session.etatParcours.questions} />
+      <ClientDiagnostic
+        questionCourante={session.etatParcours.questionCourante!}
+        questionsPosees={session.etatParcours.questionsPosees}
+      />
     </div>
   );
 }

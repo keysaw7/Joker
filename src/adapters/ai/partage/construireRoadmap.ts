@@ -1,4 +1,4 @@
-import type { Notion, Roadmap } from "@/core/domain";
+import type { Roadmap } from "@/core/domain";
 import type { z } from "zod";
 import type { schemaNotionSansIds, schemaRoadmapSansIds } from "./schemas";
 
@@ -23,11 +23,21 @@ export function construireRoadmapDepuisGeneration(
     return existante?.id ?? crypto.randomUUID();
   });
 
-  const notions: Notion[] = roadmapGeneree.notions.map((notion, index) =>
+  const notions = roadmapGeneree.notions.map((notion, index) =>
     construireNotion(notion, ids, index, roadmapPrecedente),
   );
 
   return { objectifId, version, notions };
+}
+
+export function notionsPreMaitriseesDepuisGeneration(
+  roadmapGeneree: RoadmapGeneree,
+  roadmap: Roadmap,
+): readonly string[] {
+  // Pré-maîtrise LLM désactivée : une notion n'est maîtrisée qu'après le cycle (exercice autonome).
+  void roadmapGeneree;
+  void roadmap;
+  return [];
 }
 
 function construireNotion(
@@ -35,7 +45,7 @@ function construireNotion(
   ids: string[],
   index: number,
   roadmapPrecedente?: Roadmap | null,
-): Notion {
+): import("@/core/domain").Notion {
   const id = ids[index]!;
   const precedente = roadmapPrecedente?.notions.find((n) => n.id === id);
 

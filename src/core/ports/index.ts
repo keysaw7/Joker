@@ -1,5 +1,5 @@
-export type { Diagnostic } from "./diagnostic";
-export type { PlanificationPedagogique } from "./planification";
+export type { Diagnostic, ParametresQuestionDiagnostic } from "./diagnostic";
+export type { PlanificationPedagogique, ResultatPlanificationRoadmap } from "./planification";
 export type { GenerateurDeContenu } from "./generateurContenu";
 export type { GenerateurExercices } from "./generateurExercices";
 export type { AnalyseurErreurs } from "./analyseurErreurs";
@@ -23,4 +23,9 @@ export type {
   GenerateurGraphique,
 } from "./generateurGraphique";
 export type { StockageAssets } from "./stockageAssets";
+export type {
+  BriefTranscription,
+  ResultatTranscription,
+  Transcripteur,
+} from "./transcripteur";
 export type { ConcepteurDeCours, PlanificateurCours } from "./concepteurDeCours";

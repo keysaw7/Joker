@@ -19,11 +19,13 @@ const contexteMinimal = {
     erreursFrequentes: [],
     preferencesPedagogiques: [],
     notionsMaitrisees: [],
+    niveauEstime: null,
     miseAJour: "2026-01-01T00:00:00.000Z",
   },
   roadmap: null,
   notionCouranteId: null,
   reponsesDiagnostic: [],
+  estimationNiveau: null,
 } satisfies ContexteApprentissage;
 
 describe("tracerCapacites", () => {
@@ -32,11 +34,18 @@ describe("tracerCapacites", () => {
     const brutes = creerCapacitesMock();
     const tracees = tracerCapacites(brutes);
 
-    const questionsBrutes = await brutes.diagnostic.genererQuestions(contexteMinimal);
-    const questionsTracees = await tracees.diagnostic.genererQuestions(contexteMinimal);
+    const questionBrute = await brutes.diagnostic.genererQuestion(contexteMinimal, {
+      difficulteCible: 3,
+      competencesDejaCouvertes: [],
+      estimation: null,
+    });
+    const questionTracee = await tracees.diagnostic.genererQuestion(contexteMinimal, {
+      difficulteCible: 3,
+      competencesDejaCouvertes: [],
+      estimation: null,
+    });
 
-    expect(questionsTracees).toHaveLength(questionsBrutes.length);
-    expect(questionsTracees[0]?.intitule).toBe(questionsBrutes[0]?.intitule);
+    expect(questionTracee.intitule).toBe(questionBrute.intitule);
   });
 
   it("relance les erreurs sans les modifier", async () => {

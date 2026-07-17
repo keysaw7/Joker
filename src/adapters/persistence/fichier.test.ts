@@ -21,17 +21,27 @@ const contexte = {
     erreursFrequentes: [],
     preferencesPedagogiques: [],
     notionsMaitrisees: [],
+    niveauEstime: null,
     miseAJour: "2026-01-01T00:00:00.000Z",
   },
   roadmap: null,
   notionCouranteId: null,
   reponsesDiagnostic: [],
+  estimationNiveau: null,
 };
 
 const etatParcours: EtatParcours = {
   contexte,
   phase: "diagnostic",
-  questions: [{ id: "q-1", intitule: "Quel est ton niveau ?" }],
+  questionCourante: {
+    id: "q-1",
+    intitule: "Quel est ton niveau ?",
+    competenceId: "comp-1",
+    competenceLibelle: "Niveau",
+    difficulte: 3,
+  },
+  questionsPosees: 0,
+  historiqueMaitrise: [],
 };
 
 const sessionDiagnostic: SessionPersistee = {

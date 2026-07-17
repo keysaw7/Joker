@@ -5,6 +5,12 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
   : "*.supabase.co";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Fallback STT (MediaRecorder → serveur) : un clip court peut dépasser 1 Mo.
+    serverActions: {
+      bodySizeLimit: "4mb",
+    },
+  },
   images: {
     remotePatterns: [
       {

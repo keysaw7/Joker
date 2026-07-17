@@ -20,17 +20,16 @@ export default function PageDomaine() {
 
   const [sessions, setSessions] = useState<readonly ResumeSession[]>([]);
   const [sessionEnSuppression, setSessionEnSuppression] = useState<string | null>(null);
-  const [enCours, startTransition] = useTransition();
+  const [demarrageEnCours, startDemarrage] = useTransition();
+  const [suppressionEnCours, startSuppression] = useTransition();
 
-  const chargerSessions = useCallback(() => {
-    startTransition(async () => {
-      const liste = await listerSessions(domaineId);
-      setSessions(liste);
-    });
+  const chargerSessions = useCallback(async () => {
+    const liste = await listerSessions(domaineId);
+    setSessions(liste);
   }, [domaineId]);
 
   useEffect(() => {
-    chargerSessions();
+    void chargerSessions();
   }, [chargerSessions]);
 
   if (!domaine) {
@@ -52,7 +51,8 @@ export default function PageDomaine() {
     <EcranObjectif
       domaine={domaine}
       sessions={sessions}
-      enCours={enCours}
+      demarrageEnCours={demarrageEnCours}
+      suppressionEnCours={suppressionEnCours}
       sessionEnSuppression={sessionEnSuppression}
       onRetour={() => router.push("/")}
       onReprendre={(objectifId) => {
@@ -60,14 +60,14 @@ export default function PageDomaine() {
       }}
       onSupprimer={(objectifId) => {
         setSessionEnSuppression(objectifId);
-        startTransition(async () => {
+        startSuppression(async () => {
           await supprimerSession(objectifId);
-          chargerSessions();
+          await chargerSessions();
           setSessionEnSuppression(null);
         });
       }}
       onCommencer={(intitule) => {
-        startTransition(async () => {
+        startDemarrage(async () => {
           const objectifId = await demarrerParcours(domaine.id, intitule);
           router.push(`/session/${objectifId}/diagnostic`);
         });

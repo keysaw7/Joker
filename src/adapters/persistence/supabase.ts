@@ -8,6 +8,7 @@ import type {
 } from "@/core/domain";
 import type { Persistance } from "@/core/ports";
 import { listerResumesSessions } from "./partage";
+import { sanitiserJsonPourPostgres } from "./sanitiserJson";
 
 /** Stockage distant Supabase — scopé par utilisateur via RLS. */
 export function creerPersistanceSupabase(
@@ -19,7 +20,7 @@ export function creerPersistanceSupabase(
       const { error } = await client.from("profils").upsert({
         objectif_id: profil.objectifId,
         user_id: userId,
-        data: profil,
+        data: sanitiserJsonPourPostgres(profil),
       });
       if (error) {
         throw new Error(error.message);
@@ -43,7 +44,7 @@ export function creerPersistanceSupabase(
       const { error } = await client.from("roadmaps").upsert({
         objectif_id: roadmap.objectifId,
         user_id: userId,
-        data: roadmap,
+        data: sanitiserJsonPourPostgres(roadmap),
       });
       if (error) {
         throw new Error(error.message);
@@ -68,7 +69,7 @@ export function creerPersistanceSupabase(
         id: objectif.id,
         user_id: userId,
         domaine_id: objectif.domaineId,
-        data: objectif,
+        data: sanitiserJsonPourPostgres(objectif),
         cree_le: objectif.creeLe,
       });
       if (error) {
@@ -95,7 +96,7 @@ export function creerPersistanceSupabase(
         domaine_id: session.objectif.domaineId,
         statut: session.statut,
         mise_a_jour: session.miseAJour,
-        data: session,
+        data: sanitiserJsonPourPostgres(session),
       });
       if (error) {
         throw new Error(error.message);
@@ -179,7 +180,7 @@ export function creerPersistanceSupabase(
     async sauvegarderProfilEleve(champs): Promise<void> {
       const { error } = await client.from("profil_eleve").upsert({
         user_id: userId,
-        data: champs,
+        data: sanitiserJsonPourPostgres(champs),
         mise_a_jour: new Date().toISOString(),
       });
       if (error) {
