@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Joker",
-  description: "Moteur pédagogique universel",
+  description: "Apprendre le japonais avec un parcours adapté à ton objectif",
 };
 
 export default function RootLayout({

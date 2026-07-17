@@ -8,19 +8,19 @@ const profilBase = {
   objectifId: "obj-1",
   acquis: ["bases"],
   competences: ["raisonnement"],
-  lacunes: [{ sujet: "fractions", description: "Confusion numérateur/dénominateur" }],
+  lacunes: [{ sujet: "hiragana", description: "Lecture lente" }],
   erreursFrequentes: [],
   preferencesPedagogiques: ["exemples concrets"],
-  notionsMaitrisees: ["derivation"],
+  notionsMaitrisees: ["salutations"],
   niveauEstime: 72,
   miseAJour: "2026-07-10T10:00:00.000Z",
 };
 
-const sessionMaths: SessionPersistee = {
+const sessionJaponaisCycle: SessionPersistee = {
   objectif: {
     id: "obj-1",
-    domaineId: "maths",
-    intitule: "Dérivées",
+    domaineId: "japonais",
+    intitule: "JLPT N5",
     creeLe: "2026-01-01T00:00:00.000Z",
   },
   statut: "cycle",
@@ -28,11 +28,11 @@ const sessionMaths: SessionPersistee = {
   etatParcours: null,
   etatCycle: {
     contexte: {
-      domaine: { id: "maths", nom: "Mathématiques" },
+      domaine: { id: "japonais", nom: "Japonais" },
       objectif: {
         id: "obj-1",
-        domaineId: "maths",
-        intitule: "Dérivées",
+        domaineId: "japonais",
+        intitule: "JLPT N5",
         creeLe: "2026-01-01T00:00:00.000Z",
       },
       profil: profilBase,
@@ -42,17 +42,17 @@ const sessionMaths: SessionPersistee = {
         notions: [
           {
             id: "n-1",
-            titre: "Dérivation",
+            titre: "Salutations",
             prerequisIds: [],
-            objectifsPedagogiques: ["Comprendre la dérivation"],
-            criteresDeMaitrise: [{ id: "c-1", description: "Calculer une dérivée" }],
+            objectifsPedagogiques: ["Saluer en japonais"],
+            criteresDeMaitrise: [{ id: "c-1", description: "Saluer" }],
           },
           {
             id: "n-2",
-            titre: "Intégrales",
+            titre: "Hiragana",
             prerequisIds: ["n-1"],
-            objectifsPedagogiques: ["Comprendre les intégrales"],
-            criteresDeMaitrise: [{ id: "c-2", description: "Calculer une intégrale" }],
+            objectifsPedagogiques: ["Lire le hiragana"],
+            criteresDeMaitrise: [{ id: "c-2", description: "Lire あいう" }],
           },
         ],
       },
@@ -61,7 +61,7 @@ const sessionMaths: SessionPersistee = {
       estimationNiveau: null,
     },
     etape: "cours",
-    contenu: { type: "cours", cours: { notionId: "n-1", titre: "Dérivation", blocs: [] } },
+    contenu: { type: "cours", cours: { notionId: "n-1", titre: "Salutations", blocs: [] } },
     etatExercices: null,
     termine: false,
   },
@@ -72,7 +72,7 @@ const sessionJaponais: SessionPersistee = {
   objectif: {
     id: "obj-2",
     domaineId: "japonais",
-    intitule: "JLPT N5",
+    intitule: "Tenir une conversation simple",
     creeLe: "2026-02-01T00:00:00.000Z",
   },
   statut: "diagnostic",
@@ -83,14 +83,14 @@ const sessionJaponais: SessionPersistee = {
       objectif: {
         id: "obj-2",
         domaineId: "japonais",
-        intitule: "JLPT N5",
+        intitule: "Tenir une conversation simple",
         creeLe: "2026-02-01T00:00:00.000Z",
       },
       profil: {
         ...profilBase,
         objectifId: "obj-2",
         preferencesPedagogiques: ["répétition"],
-        lacunes: [{ sujet: "hiragana", description: "Lecture lente" }],
+        lacunes: [{ sujet: "particules", description: "は vs が" }],
         notionsMaitrisees: ["salutations"],
       },
       roadmap: {
@@ -99,10 +99,10 @@ const sessionJaponais: SessionPersistee = {
         notions: [
           {
             id: "jn-1",
-            titre: "Salutations",
+            titre: "Phrases du quotidien",
             prerequisIds: [],
-            objectifsPedagogiques: ["Saluer en japonais"],
-            criteresDeMaitrise: [{ id: "jc-1", description: "Saluer" }],
+            objectifsPedagogiques: ["Commander au konbini"],
+            criteresDeMaitrise: [{ id: "jc-1", description: "Phrase simple" }],
           },
         ],
       },
@@ -130,7 +130,7 @@ describe("construireProfilEleve", () => {
     const profil = construireProfilEleve(
       "user-1",
       "eleve@exemple.fr",
-      [sessionMaths, sessionJaponais],
+      [sessionJaponaisCycle, sessionJaponais],
       null,
       DOMAINES,
     );
@@ -143,28 +143,24 @@ describe("construireProfilEleve", () => {
     expect(profil.preferencesPedagogiques).toEqual(["exemples concrets", "répétition"]);
     expect(profil.miseAJour).toBe("2026-07-14T10:00:00.000Z");
 
-    const maths = profil.competencesParDomaine.find((c) => c.domaineId === "maths");
-    expect(maths?.objectifsTotal).toBe(1);
-    expect(maths?.notionsMaitrisees).toBe(1);
-    expect(maths?.notionsTotal).toBe(2);
-    expect(maths?.lacunes).toHaveLength(1);
-
     const japonais = profil.competencesParDomaine.find((c) => c.domaineId === "japonais");
-    expect(japonais?.objectifsTotal).toBe(1);
+    expect(japonais?.objectifsTotal).toBe(2);
     expect(japonais?.notionsMaitrisees).toBe(1);
+    expect(japonais?.notionsTotal).toBe(2);
+    expect(japonais?.lacunes).toHaveLength(2);
   });
 
   it("fusionne les champs persistés fournis par l'IA", () => {
     const profil = construireProfilEleve(
       "user-1",
       null,
-      [sessionMaths],
+      [sessionJaponaisCycle],
       {
         ...champsProfilEleveInitiaux(),
         typeMemoire: "visuelle",
         pointsForts: ["logique"],
         pointsFaibles: ["patience"],
-        niveauxParDomaine: { maths: 72 },
+        niveauxParDomaine: { japonais: 72 },
       },
       DOMAINES,
     );
@@ -173,7 +169,7 @@ describe("construireProfilEleve", () => {
     expect(profil.pointsForts).toEqual(["logique"]);
     expect(profil.pointsFaibles).toEqual(["patience"]);
 
-    const maths = profil.competencesParDomaine.find((c) => c.domaineId === "maths");
-    expect(maths?.niveau).toBe(72);
+    const japonais = profil.competencesParDomaine.find((c) => c.domaineId === "japonais");
+    expect(japonais?.niveau).toBe(72);
   });
 });

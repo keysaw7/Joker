@@ -1,5 +1,5 @@
 /**
- * Un domaine est un champ de connaissance (mathématiques, japonais, cuisine…).
+ * Un domaine est un champ de connaissance (actuellement le japonais ; le moteur reste extensible).
  * Le moteur reste identique quel que soit le domaine : seul le contenu change.
  */
 export interface Domaine {

@@ -10,11 +10,11 @@ import {
 function etatCycle(overrides: Partial<EtatCycle> = {}): EtatCycle {
   return {
     contexte: {
-      domaine: { id: "maths", nom: "Mathématiques" },
+      domaine: { id: "japonais", nom: "Japonais" },
       objectif: {
         id: "obj-1",
-        domaineId: "maths",
-        intitule: "Test",
+        domaineId: "japonais",
+        intitule: "JLPT N5",
         creeLe: "2026-01-01",
       },
       profil: {
@@ -91,14 +91,14 @@ describe("progression — logique pure de presentation", () => {
         ...etatCycle().contexte,
         profil: {
           ...etatCycle().contexte.profil,
-          notionsMaitrisees: ["bases de la pâte", "savoir pétrir", "n1"],
+          notionsMaitrisees: ["hiragana de base", "salutations", "n1"],
         },
       },
     });
     expect(progression(etat).faites).toBe(1);
     expect(
       notionsMaitriseesValides(
-        ["bases de la pâte", "n1"],
+        ["hiragana de base", "n1"],
         etat.contexte.roadmap,
       ),
     ).toEqual(["n1"]);

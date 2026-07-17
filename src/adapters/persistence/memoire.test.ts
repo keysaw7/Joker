@@ -9,7 +9,7 @@ describe("creerPersistanceMemoire — profil élève", () => {
       ...champsProfilEleveInitiaux(),
       typeMemoire: "auditive" as const,
       pointsForts: ["écoute active"],
-      niveauxParDomaine: { maths: 55 },
+      niveauxParDomaine: { japonais: 55 },
     };
 
     expect(await persistance.chargerProfilEleve()).toBeNull();
@@ -24,7 +24,7 @@ describe("creerPersistanceMemoire — profil élève", () => {
     const sessionAncienne = {
       objectif: {
         id: "obj-1",
-        domaineId: "maths",
+        domaineId: "japonais",
         intitule: "Ancien",
         creeLe: "2026-01-01T00:00:00.000Z",
       },
@@ -54,7 +54,7 @@ describe("creerPersistanceMemoire — profil élève", () => {
     const session = {
       objectif: {
         id: "obj-1",
-        domaineId: "maths",
+        domaineId: "japonais",
         intitule: "À supprimer",
         creeLe: "2026-01-01T00:00:00.000Z",
       },
@@ -82,7 +82,7 @@ describe("creerPersistanceMemoire — profil élève", () => {
 
     expect(await persistance.chargerSession("obj-1")).toBeNull();
     expect(await persistance.chargerProfil("obj-1")).toBeNull();
-    expect(await persistance.listerSessions("maths")).toHaveLength(0);
-    expect(await persistance.chargerObjectifs("maths")).toHaveLength(0);
+    expect(await persistance.listerSessions("japonais")).toHaveLength(0);
+    expect(await persistance.chargerObjectifs("japonais")).toHaveLength(0);
   });
 });

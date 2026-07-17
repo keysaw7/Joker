@@ -8,11 +8,11 @@ import { OrchestrateurCycle } from "@/core/cycle/orchestrateur";
 import { MIN_QUESTIONS } from "@/core/parcours/reglesDiagnostic";
 import { OrchestrateurParcours } from "@/core/parcours/orchestrateurParcours";
 
-const domaine = { id: "maths", nom: "Mathématiques" };
+const domaine = { id: "japonais", nom: "Japonais" };
 const objectif = {
   id: "obj-1",
-  domaineId: "maths",
-  intitule: "Comprendre les dérivées",
+  domaineId: "japonais",
+  intitule: "JLPT N5",
   creeLe: "2026-01-01T00:00:00.000Z",
 };
 
@@ -83,12 +83,12 @@ describe("OrchestrateurParcours", () => {
 
     const profil = await persistance.chargerProfil("obj-1");
     const roadmap = await persistance.chargerRoadmap("obj-1");
-    const objectifs = await persistance.chargerObjectifs("maths");
+    const objectifs = await persistance.chargerObjectifs("japonais");
     const profilEleve = await persistance.chargerProfilEleve();
     expect(profil).not.toBeNull();
     expect(roadmap).not.toBeNull();
     expect(objectifs.some((o) => o.id === "obj-1")).toBe(true);
-    expect(profilEleve?.niveauxParDomaine.maths).toBeGreaterThan(0);
+    expect(profilEleve?.niveauxParDomaine.japonais).toBeGreaterThan(0);
   });
 
   it("le contexte pret est accepté par OrchestrateurCycle", async () => {

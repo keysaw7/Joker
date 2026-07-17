@@ -9,10 +9,10 @@ import {
 
 const notion: Notion = {
   id: "notion-1",
-  titre: "Pâte à pizza",
+  titre: "Salutations",
   prerequisIds: [],
-  objectifsPedagogiques: ["Comprendre la pâte"],
-  criteresDeMaitrise: [{ id: "c1", description: "Réussir une pâte" }],
+  objectifsPedagogiques: ["Saluer en japonais"],
+  criteresDeMaitrise: [{ id: "c1", description: "Saluer correctement" }],
 };
 
 const intentionTexte: IntentionBloc = {
@@ -35,7 +35,7 @@ const intentionEtapes: IntentionBloc = {
 
 const intentionGraphique: IntentionBloc = {
   type: "graphique",
-  briefMedia: "Graphique des ingrédients",
+  briefMedia: "Tableau hiragana de base",
 };
 
 describe("filtrerIntentionsExempleExpert", () => {
@@ -59,8 +59,8 @@ describe("filtrerIntentionsExempleExpert", () => {
     expect(
       estIntentionExempleExpertPermise({
         type: "image",
-        briefMedia: "Photo de cuisine",
-        alt: "Cuisine professionnelle",
+        briefMedia: "Scène de rue au Japon",
+        alt: "Deux personnes se saluent",
       }),
     ).toBe(true);
   });

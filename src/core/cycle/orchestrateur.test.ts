@@ -16,11 +16,11 @@ function creerContexte(
   overrides: Partial<ContexteApprentissage> = {},
 ): ContexteApprentissage {
   return {
-    domaine: { id: "maths", nom: "Mathématiques" },
+    domaine: { id: "japonais", nom: "Japonais" },
     objectif: {
       id: "obj-1",
-      domaineId: "maths",
-      intitule: "Comprendre les dérivées",
+      domaineId: "japonais",
+      intitule: "JLPT N5",
       creeLe: "2026-01-01T00:00:00.000Z",
     },
     profil: {
@@ -77,7 +77,7 @@ describe("OrchestrateurCycle", () => {
   const roadmapSimple = creerRoadmap([
     {
       id: "n1",
-      titre: "Les dérivées",
+      titre: "Salutations",
       prerequisIds: [],
       objectifsPedagogiques: [],
       criteresDeMaitrise: [{ id: "c1", description: "Exercice autonome réussi" }],
@@ -298,7 +298,7 @@ describe("OrchestrateurCycle", () => {
 
     const profil = await persistance.chargerProfil("obj-1");
     const roadmap = await persistance.chargerRoadmap("obj-1");
-    const objectifs = await persistance.chargerObjectifs("maths");
+    const objectifs = await persistance.chargerObjectifs("japonais");
     expect(profil).not.toBeNull();
     expect(profil?.notionsMaitrisees).toContain("n1");
     expect(roadmap).not.toBeNull();

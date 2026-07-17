@@ -6,11 +6,11 @@ import { cheminSessionCourant, estEtapeCourante } from "@/app/_experience/naviga
 function etatCycle(overrides: Partial<EtatCycle> = {}): EtatCycle {
   return {
     contexte: {
-      domaine: { id: "cuisine", nom: "Cuisine" },
+      domaine: { id: "japonais", nom: "Japonais" },
       objectif: {
         id: "obj-1",
-        domaineId: "cuisine",
-        intitule: "Pizza",
+        domaineId: "japonais",
+        intitule: "JLPT N5",
         creeLe: "2026-01-01",
       },
       profil: {
@@ -30,7 +30,7 @@ function etatCycle(overrides: Partial<EtatCycle> = {}): EtatCycle {
         notions: [
           {
             id: "n1",
-            titre: "Pâte",
+            titre: "Salutations",
             prerequisIds: [],
             objectifsPedagogiques: [],
             criteresDeMaitrise: [],

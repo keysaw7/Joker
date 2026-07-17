@@ -5,60 +5,60 @@ import {
 } from "@/core/cours/qualiteCours";
 import type { PlanCours } from "@/core/domain";
 
-function planSyllabusPizza(): PlanCours {
+function planSyllabusJaponais(): PlanCours {
   return {
-    titre: "Plan de cours adaptable : hydratation pizza",
+    titre: "Plan de cours adaptable : salutations JLPT N5",
     intentions: [
       {
         type: "texte",
         markdown:
-          "**Objectif :** maîtriser les quantités.\n**Public :** débutant.\n**Structure :** 10 blocs.",
+          "**Objectif :** maîtriser les formules de base.\n**Public :** débutant.\n**Structure :** 10 blocs.",
       },
       {
         type: "texte",
         markdown:
-          "- Fiche pratique 1 : Calcul des quantités\n- Fiche pratique 2 : Hydratation\n- Fiche pratique 3 : Repos",
+          "- Fiche pratique 1 : こんにちは et registre\n- Fiche pratique 2 : Présentation\n- Fiche pratique 3 : Politesse",
       },
       { type: "texte", markdown: "Bloc 1 : Fondamentaux — comprendre les notions." },
-      { type: "schema", briefMedia: "Processus pizza" },
-      { type: "image", briefMedia: "Pizza", alt: "Pizza" },
+      { type: "schema", briefMedia: "Processus salutation" },
+      { type: "image", briefMedia: "Scène konbini", alt: "Konbini" },
     ],
   };
 }
 
 function planLeconDense(): PlanCours {
   const dense =
-    "Pour 300 g de farine, une hydratation à 65 % correspond à 195 g d'eau. " +
-    "Le sel représente environ 2 % du poids de farine, soit 6 g. " +
-    "La levure sèche se situe souvent entre 1 et 1,5 % pour une fermentation courte. " +
-    "Peser chaque ingrédient évite les approximations qui rendent la pâte difficile à étaler.";
+    "**こんにちは** sert le jour ; **こんばんは** le soir. " +
+    "Le matin poli : **おはようございます**. Pour te présenter : **はじめまして** puis **よろしくお願いします**. " +
+    "Répéter à voix haute fixe la prononciation et le rythme des formules. " +
+    "Noter romaji + sens en français sur une fiche évite les confusions au konbini ou en cours.";
 
   return {
-    titre: "Hydratation et quantités pour deux portions",
+    titre: "Salutations et présentation pour le JLPT N5",
     intentions: [
       { type: "texte", markdown: `## Introduction\n\n${dense}` },
       {
         type: "encadre",
         variante: "info",
-        markdown: `${dense} Garde ces repères visibles pendant la préparation.`,
+        markdown: `${dense} Garde ces formules visibles pendant la répétition.`,
       },
-      { type: "schema", briefMedia: "Flowchart pesée et hydratation" },
-      { type: "image", briefMedia: "Plan de travail", alt: "Plan de travail" },
+      { type: "schema", briefMedia: "Flowchart salutation selon l'heure" },
+      { type: "image", briefMedia: "Rue au Japon", alt: "Salutations" },
       {
         type: "etapes",
         etapes: [
           {
-            titre: "Peser",
-            markdown: `${dense} Commence toujours par la farine comme référence.`,
+            titre: "Répéter",
+            markdown: `${dense} Commence par trois salutations selon l'heure.`,
           },
         ],
       },
       {
         type: "quizFlash",
-        question: "Hydratation typique ?",
-        options: ["60–70 %", "90 %"],
-        bonneReponse: 0,
-        explication: "60–70 % est la plage standard.",
+        question: "Salutation en milieu de journée ?",
+        options: ["おはよう", "こんにちは"],
+        bonneReponse: 1,
+        explication: "こんにちは est la formule standard.",
       },
     ],
   };
@@ -66,7 +66,7 @@ function planLeconDense(): PlanCours {
 
 describe("qualiteCours", () => {
   it("rejette un syllabus type plan de cours / fiches vides", () => {
-    const evaluation = evaluerQualitePlan(planSyllabusPizza());
+    const evaluation = evaluerQualitePlan(planSyllabusJaponais());
     expect(evaluation.valide).toBe(false);
     expect(evaluation.defauts.some((d) => d.includes("plan"))).toBe(true);
     expect(evaluation.defauts.some((d) => d.includes("Fiches pratiques"))).toBe(true);
@@ -79,7 +79,7 @@ describe("qualiteCours", () => {
   });
 
   it("choisit le plan le plus riche entre deux brouillons", () => {
-    const meilleur = choisirMeilleurPlan(planSyllabusPizza(), planLeconDense());
+    const meilleur = choisirMeilleurPlan(planSyllabusJaponais(), planLeconDense());
     expect(meilleur.titre).toBe(planLeconDense().titre);
   });
 });

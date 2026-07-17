@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ajouterReponse, contexteInitial, profilInitial } from "./regles";
 
-const domaine = { id: "maths", nom: "Mathématiques" };
+const domaine = { id: "japonais", nom: "Japonais" };
 const objectif = {
   id: "obj-1",
-  domaineId: "maths",
-  intitule: "Comprendre les dérivées",
+  domaineId: "japonais",
+  intitule: "JLPT N5",
   creeLe: "2026-01-01T00:00:00.000Z",
 };
 

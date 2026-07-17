@@ -10,10 +10,10 @@ describe("construireRoadmapDepuisGeneration", () => {
     const roadmap = construireRoadmapDepuisGeneration("obj-1", 1, {
       notions: [
         {
-          titre: "Pâte",
+          titre: "Salutations",
           prerequisOrdres: [],
-          objectifsPedagogiques: ["Maîtriser la pâte"],
-          criteresDeMaitrise: [{ description: "Pétrir correctement" }],
+          objectifsPedagogiques: ["Saluer en japonais"],
+          criteresDeMaitrise: [{ description: "Saluer correctement" }],
           maitriseInitiale: false,
         },
       ],
@@ -21,7 +21,7 @@ describe("construireRoadmapDepuisGeneration", () => {
 
     expect(roadmap.notions).toHaveLength(1);
     expect(roadmap.notions[0]?.id).toBeTruthy();
-    expect(roadmap.notions[0]?.titre).toBe("Pâte");
+    expect(roadmap.notions[0]?.titre).toBe("Salutations");
   });
 
   it("préserve les IDs des notions existantes par titre (archive / sidebar)", () => {
@@ -30,20 +30,20 @@ describe("construireRoadmapDepuisGeneration", () => {
       version: 1,
       notions: [
         {
-          id: "notion-pate-stable",
-          titre: "Pâte",
+          id: "notion-salutations-stable",
+          titre: "Salutations",
           prerequisIds: [],
-          objectifsPedagogiques: ["Maîtriser la pâte"],
+          objectifsPedagogiques: ["Saluer en japonais"],
           criteresDeMaitrise: [
-            { id: "crit-1", description: "Pétrir correctement" },
+            { id: "crit-1", description: "Saluer correctement" },
           ],
         },
         {
-          id: "notion-cuisson",
-          titre: "Cuisson",
-          prerequisIds: ["notion-pate-stable"],
-          objectifsPedagogiques: ["Cuire"],
-          criteresDeMaitrise: [{ id: "crit-2", description: "Cuire juste" }],
+          id: "notion-hiragana",
+          titre: "Hiragana",
+          prerequisIds: ["notion-salutations-stable"],
+          objectifsPedagogiques: ["Lire le hiragana"],
+          criteresDeMaitrise: [{ id: "crit-2", description: "Lire あいう" }],
         },
       ],
     };
@@ -54,24 +54,24 @@ describe("construireRoadmapDepuisGeneration", () => {
       {
         notions: [
           {
-            titre: "Pâte",
+            titre: "Salutations",
             prerequisOrdres: [],
-            objectifsPedagogiques: ["Maîtriser la pâte"],
-            criteresDeMaitrise: [{ description: "Pétrir correctement" }],
+            objectifsPedagogiques: ["Saluer en japonais"],
+            criteresDeMaitrise: [{ description: "Saluer correctement" }],
           maitriseInitiale: false,
           },
           {
-            titre: "Cuisson",
+            titre: "Hiragana",
             prerequisOrdres: [0],
-            objectifsPedagogiques: ["Cuire au four"],
-            criteresDeMaitrise: [{ description: "Cuire juste" }],
+            objectifsPedagogiques: ["Lire le hiragana"],
+            criteresDeMaitrise: [{ description: "Lire あいう" }],
             maitriseInitiale: false,
           },
           {
-            titre: "Garniture",
+            titre: "Particules de base",
             prerequisOrdres: [1],
-            objectifsPedagogiques: ["Garnir"],
-            criteresDeMaitrise: [{ description: "Équilibrer" }],
+            objectifsPedagogiques: ["Utiliser は et が"],
+            criteresDeMaitrise: [{ description: "Phrase simple" }],
             maitriseInitiale: false,
           },
         ],
@@ -79,11 +79,11 @@ describe("construireRoadmapDepuisGeneration", () => {
       precedente,
     );
 
-    expect(adaptee.notions[0]?.id).toBe("notion-pate-stable");
-    expect(adaptee.notions[1]?.id).toBe("notion-cuisson");
-    expect(adaptee.notions[1]?.prerequisIds).toEqual(["notion-pate-stable"]);
-    expect(adaptee.notions[2]?.titre).toBe("Garniture");
-    expect(adaptee.notions[2]?.id).not.toBe("notion-pate-stable");
+    expect(adaptee.notions[0]?.id).toBe("notion-salutations-stable");
+    expect(adaptee.notions[1]?.id).toBe("notion-hiragana");
+    expect(adaptee.notions[1]?.prerequisIds).toEqual(["notion-salutations-stable"]);
+    expect(adaptee.notions[2]?.titre).toBe("Particules de base");
+    expect(adaptee.notions[2]?.id).not.toBe("notion-salutations-stable");
     expect(adaptee.notions[0]?.criteresDeMaitrise[0]?.id).toBe("crit-1");
   });
 });
@@ -93,17 +93,17 @@ describe("notionsPreMaitriseesDepuisGeneration", () => {
     const generee = {
       notions: [
         {
-          titre: "Pâte",
+          titre: "Salutations",
           prerequisOrdres: [],
-          objectifsPedagogiques: ["Maîtriser la pâte"],
-          criteresDeMaitrise: [{ description: "Pétrir" }],
+          objectifsPedagogiques: ["Saluer en japonais"],
+          criteresDeMaitrise: [{ description: "Saluer" }],
           maitriseInitiale: true,
         },
         {
-          titre: "Hydratation",
+          titre: "Hiragana",
           prerequisOrdres: [0],
-          objectifsPedagogiques: ["Calculer l'eau"],
-          criteresDeMaitrise: [{ description: "Ratio correct" }],
+          objectifsPedagogiques: ["Lire le hiragana"],
+          criteresDeMaitrise: [{ description: "Lire あ" }],
           maitriseInitiale: false,
         },
       ],

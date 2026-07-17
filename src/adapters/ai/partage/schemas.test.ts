@@ -14,11 +14,11 @@ describe("schemas IA", () => {
   it("accepte 5 questions de diagnostic valides", () => {
     const result = schemaQuestionsDiagnostic.safeParse({
       questions: [
-        { intitule: "Quel est votre niveau en algèbre ?" },
-        { intitule: "Comment résolvez-vous une équation du premier degré ?" },
-        { intitule: "Que savez-vous sur les fonctions ?" },
-        { intitule: "Expliquez le concept de dérivée." },
-        { intitule: "Comment appliquez-vous les dérivées à un problème concret ?" },
+        { intitule: "Quel est votre niveau en japonais ?" },
+        { intitule: "Savez-vous lire le hiragana ?" },
+        { intitule: "Comment vous présentez-vous en japonais ?" },
+        { intitule: "Expliquez la différence entre です et だ." },
+        { intitule: "Comment commanderiez-vous au konbini ?" },
       ],
     });
     expect(result.success).toBe(true);
@@ -28,7 +28,7 @@ describe("schemas IA", () => {
     const result = schemaProfilSansIds.safeParse({
       acquis: ["arithmétique"],
       competences: ["calcul mental"],
-      lacunes: [{ sujet: "fractions", description: "manque de pratique" }],
+      lacunes: [{ sujet: "particules", description: "confusion は / が" }],
       erreursFrequentes: ["inversion des termes"],
       preferencesPedagogiques: ["exemples concrets"],
       notionsMaitrisees: [],
@@ -246,17 +246,17 @@ describe("schemas IA", () => {
 
   it("accepte un exemple d'expert valide (types restreints)", () => {
     const result = schemaExempleExpertSansNotionId.safeParse({
-      contexte: "Un pizzaiolo prépare sa pâte avant le service du soir.",
+      contexte: "Un étudiant prépare le JLPT N5 avant un échange au Japon.",
       intentions: [
         {
           type: "texte",
-          markdown: "Le client veut une pâte légère malgré la chaleur de la cuisine.",
+          markdown: "Il doit saluer son hôte malgré le jet lag du matin.",
           ...champsNulsIntention,
         },
         {
           type: "encadre",
           variante: "exemple",
-          markdown: "L'expert teste l'hydratation au toucher avant d'ajuster.",
+          markdown: "L'expert choisit おはようございます plutôt qu'un simple おはよう.",
           titre: "Geste expert",
           source: null,
           cible: null,
@@ -273,9 +273,9 @@ describe("schemas IA", () => {
         },
         {
           type: "analogie",
-          source: "un thermomètre de cuisson",
-          cible: "le toucher de la pâte",
-          explication: "Comme on vérifie la température, l'expert vérifie l'élasticité.",
+          source: "choisir bonjour ou bonsoir en français",
+          cible: "le registre en japonais",
+          explication: "Comme en français, le moment et la politesse guident la formule.",
           markdown: null,
           variante: null,
           titre: null,

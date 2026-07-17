@@ -58,11 +58,11 @@ export interface OptionsCapacitesMock {
 
 function planCoursMock(notion: Notion): PlanCours {
   const paragrapheDense =
-    "Pour deux portions, on part en général de **300 g de farine**. " +
-    "L'hydratation se calcule en pourcentage : eau ÷ farine × 100. " +
-    "Une pâte standard se situe souvent entre **60 % et 70 %**, soit **180 à 210 g d'eau** pour 300 g de farine. " +
-    "Ajoute environ **6 g de sel** (2 % du poids de farine) et **3 à 4 g de levure** sèche selon le temps de repos. " +
-    "Pèse tes ingrédients : c'est la base d'une pâte régulière et reproductible.";
+    "Les **salutations de base** ouvrent presque toute interaction en japonais. " +
+    "**こんにちは** (konnichiwa) sert le jour ; **こんばんは** (konbanwa) le soir. " +
+    "**おはよう** (ohayō) le matin — **ございます** (gozaimasu) rend la formule plus polie. " +
+    "Pour te présenter : **はじめまして** (hajimemashite) puis **よろしくお願いします** (yoroshiku onegaishimasu). " +
+    "Écoute la prononciation et répète à voix haute : c'est la base du JLPT N5 et du quotidien.";
 
   const intentions: IntentionBloc[] = [
     {
@@ -74,46 +74,46 @@ function planCoursMock(notion: Notion): PlanCours {
       variante: "astuce",
       titre: "Pour ton objectif",
       markdown:
-        "Note tes ratios sur une fiche près du plan de travail : farine, eau, sel, levure. " +
-        "Tu ajustes ensuite l'hydratation selon la farine et le temps de fermentation disponible.",
+        "Note sur une fiche les formules avec **romaji** et sens en français. " +
+        "Tu peux ensuite les réutiliser en jeu de rôle (konbini, cours, premier contact).",
     },
     {
       type: "analogie",
-      source: "une recette de cuisine",
+      source: "dire bonjour en français",
       cible: notion.titre,
       explication:
-        "Comme pour une recette, un petit écart sur l'eau change la texture : trop sèche, la pâte se déchire ; trop hydratée, elle colle.",
+        "Comme en français (bonjour / bonsoir), le japonais choisit la formule selon le moment et le registre (familier vs poli).",
     },
     {
       type: "schema",
-      briefMedia: `Flowchart : pesée farine → calcul eau selon hydratation % → ajout sel et levure → repos → étalage → cuisson, pour « ${notion.titre} »`,
+      briefMedia: `Flowchart : repérer le moment de la journée → choisir こんにちは / こんばんは / おはよう → ajouter ございます si poli → présentation はじめまして pour « ${notion.titre} »`,
       legende: "Enchaînement des étapes clés",
     },
     {
       type: "graphique",
-      briefMedia: `Barres comparant hydratation 55 %, 65 % et 75 % : maniabilité et alvéolage pour « ${notion.titre} »`,
-      legende: "Effet de l'hydratation sur la pâte",
+      briefMedia: `Barres comparant registre neutre vs poli pour les mêmes situations (matin, jour, soir) pour « ${notion.titre} »`,
+      legende: "Registre et politesse",
     },
     {
       type: "image",
-      briefMedia: `Plan de travail avec balance, bol de pâte et ingrédients étiquetés pour « ${notion.titre} »`,
-      alt: `Illustration des quantités pour ${notion.titre}`,
+      briefMedia: `Scène de rue au Japon : deux personnes se saluent avec bulles en hiragana pour « ${notion.titre} »`,
+      alt: `Illustration des salutations pour ${notion.titre}`,
     },
     {
       type: "etapes",
       etapes: [
         {
-          titre: "Peser la farine",
-          markdown: "300 g pour deux portions. C'est la référence pour tous les autres calculs.",
+          titre: "Saluer selon l'heure",
+          markdown: "Jour : こんにちは. Soir : こんばんは. Matin poli : おはようございます.",
         },
         {
-          titre: "Calculer l'eau",
-          markdown: "65 % d'hydratation → 195 g d'eau. Mélange progressivement jusqu'à incorporation homogène.",
+          titre: "Se présenter",
+          markdown: "はじめまして + ton prénom (ex. …です) + よろしくお願いします.",
         },
         {
-          titre: "Repos et cuisson",
+          titre: "S'entraîner",
           markdown:
-            "Laisse reposer au moins 30 min à température ambiante, étale finement, puis cuisson forte (pierre ou plaque préchauffée).",
+            "Répète chaque formule trois fois à voix haute, puis enchaîne une mini-présentation complète.",
         },
       ],
     },
@@ -121,16 +121,15 @@ function planCoursMock(notion: Notion): PlanCours {
       type: "texte",
       markdown:
         "## À retenir\n\n" +
-        "Fixe d'abord la farine, choisis ton **pourcentage d'hydratation**, puis déduis eau, sel et levure. " +
-        "Tu peux reproduire la même pâte en adaptant seulement le temps de repos.",
+        "Choisis la salutation selon **l'heure** et le **registre**, puis enchaîne **はじめまして** et **よろしくお願いします** pour une première rencontre.",
     },
     {
       type: "quizFlash",
-      question: `Quelle plage d'hydratation est typique pour une pâte à pizza standard ?`,
-      options: ["50–55 %", "60–70 %", "75–85 %", "90 %"],
+      question: `Quelle salutation convient en milieu de journée, de façon standard ?`,
+      options: ["おはよう", "こんにちは", "こんばんは", "さようなら"],
       bonneReponse: 1,
       explication:
-        "Entre **60 % et 70 %**, la pâte reste maniable tout en développant une bonne structure à la cuisson.",
+        "**こんにちは** est la formule habituelle entre le matin et le début de soirée.",
     },
   ];
 

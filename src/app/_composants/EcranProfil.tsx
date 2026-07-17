@@ -104,7 +104,7 @@ export function EcranProfil({ profil }: EcranProfilProps) {
       </div>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">Compétences par domaine</h2>
+        <h2 className="text-lg font-semibold">Compétences en japonais</h2>
         {DOMAINES.map((domaine) => {
           const competence = profil.competencesParDomaine.find(
             (item) => item.domaineId === domaine.id,

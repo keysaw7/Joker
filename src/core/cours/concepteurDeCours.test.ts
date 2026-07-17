@@ -12,10 +12,10 @@ import type {
 function creerNotion(): Notion {
   return {
     id: "n1",
-    titre: "Les dérivées",
+    titre: "Salutations",
     prerequisIds: [],
-    objectifsPedagogiques: ["Comprendre la notion de taux de variation"],
-    criteresDeMaitrise: [{ id: "c1", description: "Calculer une dérivée simple" }],
+    objectifsPedagogiques: ["Saluer en japonais"],
+    criteresDeMaitrise: [{ id: "c1", description: "Saluer correctement" }],
   };
 }
 
@@ -26,11 +26,11 @@ function creerContexte(notion: Notion): ContexteApprentissage {
     notions: [notion],
   };
   return {
-    domaine: { id: "maths", nom: "Mathématiques" },
+    domaine: { id: "japonais", nom: "Japonais" },
     objectif: {
       id: "obj-1",
-      domaineId: "maths",
-      intitule: "Comprendre les dérivées",
+      domaineId: "japonais",
+      intitule: "JLPT N5",
       creeLe: "2026-01-01T00:00:00.000Z",
     },
     profil: {

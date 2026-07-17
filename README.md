@@ -1,4 +1,4 @@
-# Joker — Moteur pédagogique universel
+# Joker — Moteur pédagogique (japonais)
 
 > Ce document est la **Constitution du projet**.
 > Toute décision de conception, de code ou de produit doit rester cohérente avec lui.
@@ -27,15 +27,13 @@ Ce n'est pas un LMS.
 Ce n'est pas un chatbot.
 Ce n'est pas « ChatGPT avec une belle interface ».
 
-Joker est un **moteur pédagogique universel**.
+Joker est un **moteur pédagogique** centré aujourd'hui sur l'**apprentissage du japonais** (le cœur reste extensible techniquement).
 
 Sa promesse :
 
-> Permettre à n'importe qui d'apprendre n'importe quel domaine de la manière la plus efficace possible.
+> Permettre à n'importe qui d'apprendre le japonais de la manière la plus efficace possible, avec un parcours adapté à son objectif.
 
-Le domaine peut être les mathématiques, le japonais, la cuisine, la programmation, la physique, la musique, le droit, l'histoire, le marketing, ou absolument n'importe quoi d'autre.
-
-**Le moteur reste toujours identique. Seul le contenu change.**
+**Le moteur reste identique d'un objectif à l'autre. Seul le contenu pédagogique change.**
 
 L'intelligence du système ne réside pas dans les connaissances elles-mêmes, mais dans sa **capacité à construire le meilleur parcours d'apprentissage possible**.
 
@@ -131,7 +129,7 @@ L'expérience est organisée en **cycles**. Chaque cycle correspond à l'acquisi
 
 ### 7.1. Accueil
 
-Présentation rapide du produit. L'utilisateur choisit un **domaine** : mathématiques, japonais, cuisine, programmation, etc.
+Présentation rapide du produit. L'utilisateur démarre directement un parcours **japonais**.
 
 ### 7.2. Objectifs
 
@@ -140,9 +138,8 @@ L'utilisateur peut reprendre un objectif existant ou en créer un nouveau.
 Exemples :
 
 - Réussir le JLPT N5
-- Comprendre les dérivées
-- Maîtriser les sauces françaises
-- Apprendre React
+- Apprendre à lire le hiragana
+- Tenir une conversation simple au konbini
 
 Une fois créé, l'objectif devient le **contexte principal** de toute la progression.
 
@@ -183,11 +180,7 @@ L'utilisateur ne perçoit **qu'un seul cours cohérent**.
 
 ### 7.7. Exemple d'expert
 
-Une fois la notion comprise, le moteur montre comment un expert utilise réellement cette connaissance :
-
-- **Japonais** — construction complète d'une phrase réelle.
-- **Cuisine** — réalisation d'une recette utilisant précisément la technique étudiée.
-- **Mathématiques** — résolution d'un problème réel.
+Une fois la notion comprise, le moteur montre comment un expert utilise réellement cette connaissance — par exemple la **construction complète d'une phrase réelle** en japonais (konbini, présentation, politesse).
 
 Le but : montrer la connaissance **en contexte**.
 
@@ -377,7 +370,7 @@ Termes de référence — à utiliser tels quels dans le code et les discussions
 
 | Terme | Définition |
 |---|---|
-| **Domaine** | Le champ de connaissance (maths, japonais…). |
+| **Domaine** | Le champ de connaissance (produit : japonais). |
 | **Objectif** | Le but concret de l'élève. Contexte principal de la progression. |
 | **Diagnostic** | Représentation du niveau réel de l'élève à un instant donné. |
 | **Profil d'apprenant** | État vivant de l'élève : acquis, lacunes, erreurs fréquentes, préférences. Enrichi en continu. |

@@ -8,11 +8,11 @@ function creerContexte(
   overrides: Partial<ContexteApprentissage> = {},
 ): ContexteApprentissage {
   return {
-    domaine: { id: "maths", nom: "Mathématiques" },
+    domaine: { id: "japonais", nom: "Japonais" },
     objectif: {
       id: "obj-1",
-      domaineId: "maths",
-      intitule: "Comprendre les dérivées",
+      domaineId: "japonais",
+      intitule: "JLPT N5",
       creeLe: "2026-01-01T00:00:00.000Z",
     },
     profil: {
@@ -147,8 +147,8 @@ describe("ports — contrats implémentables hors ligne", () => {
   });
 
   it("SourceDeConnaissances fallback signale l'absence de Bible", async () => {
-    expect(await source.estDisponible("maths")).toBe(false);
-    expect(await source.rechercher("maths", "dérivées")).toEqual([]);
+    expect(await source.estDisponible("japonais")).toBe(false);
+    expect(await source.rechercher("japonais", "hiragana")).toEqual([]);
   });
 
   it("Persistance sauvegarde et recharge profil, roadmap et objectifs", async () => {
@@ -162,9 +162,9 @@ describe("ports — contrats implémentables hors ligne", () => {
     expect(await persistance.chargerRoadmap("obj-1")).toEqual(roadmap);
 
     await persistance.sauvegarderObjectif(contexte.objectif);
-    const objectifs = await persistance.chargerObjectifs("maths");
+    const objectifs = await persistance.chargerObjectifs("japonais");
     expect(objectifs).toHaveLength(1);
-    expect(objectifs[0]?.intitule).toBe("Comprendre les dérivées");
+    expect(objectifs[0]?.intitule).toBe("JLPT N5");
   });
 
   it("Persistance sauvegarde le profil élève transversal", async () => {

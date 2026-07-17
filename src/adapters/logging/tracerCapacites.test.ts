@@ -4,11 +4,11 @@ import { describe, expect, it } from "vitest";
 import { tracerCapacites } from "./tracerCapacites";
 
 const contexteMinimal = {
-  domaine: { id: "maths", nom: "Mathématiques" },
+  domaine: { id: "japonais", nom: "Japonais" },
   objectif: {
     id: "obj-1",
-    domaineId: "maths",
-    intitule: "Algèbre",
+    domaineId: "japonais",
+    intitule: "JLPT N5",
     creeLe: "2026-01-01T00:00:00.000Z",
   },
   profil: {

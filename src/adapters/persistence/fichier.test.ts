@@ -6,11 +6,11 @@ import { creerPersistanceFichier } from "@/adapters/persistence/fichier";
 import type { EtatParcours, SessionPersistee } from "@/core/domain";
 
 const contexte = {
-  domaine: { id: "maths", nom: "Mathématiques" },
+  domaine: { id: "japonais", nom: "Japonais" },
   objectif: {
     id: "obj-1",
-    domaineId: "maths",
-    intitule: "Comprendre les dérivées",
+    domaineId: "japonais",
+    intitule: "JLPT N5",
     creeLe: "2026-01-01T00:00:00.000Z",
   },
   profil: {
@@ -108,7 +108,7 @@ describe("creerPersistanceFichier", () => {
       objectif: {
         ...sessionDiagnostic.objectif,
         id: "obj-3",
-        intitule: "Intégrales",
+        intitule: "Hiragana",
       },
       etatParcours: {
         ...etatParcours,
@@ -117,7 +117,7 @@ describe("creerPersistanceFichier", () => {
           objectif: {
             ...contexte.objectif,
             id: "obj-3",
-            intitule: "Intégrales",
+            intitule: "Hiragana",
           },
           profil: { ...contexte.profil, objectifId: "obj-3" },
         },
@@ -128,11 +128,12 @@ describe("creerPersistanceFichier", () => {
     await persistance.sauvegarderSession(sessionDiagnostic);
     await persistance.sauvegarderSession(sessionRecente);
 
-    const sessions = await persistance.listerSessions("maths");
+    const sessions = await persistance.listerSessions("japonais");
 
-    expect(sessions).toHaveLength(2);
+    expect(sessions).toHaveLength(3);
     expect(sessions[0]?.objectif.id).toBe("obj-3");
     expect(sessions[1]?.objectif.id).toBe("obj-1");
+    expect(sessions[2]?.objectif.id).toBe("obj-2");
     expect(sessions[0]?.statut).toBe("diagnostic");
   });
 
@@ -146,12 +147,12 @@ describe("creerPersistanceFichier", () => {
 
     const fichier = path.join(racine, ".data", "sessions.json");
     const contenu = await readFile(fichier, "utf8");
-    expect(contenu).toContain("Comprendre les dérivées");
+    expect(contenu).toContain("JLPT N5");
 
     const seconde = creerPersistanceFichier(racine);
 
     expect(await seconde.chargerSession("obj-1")).toEqual(sessionDiagnostic);
     expect(await seconde.chargerProfil("obj-1")).toEqual(contexte.profil);
-    expect(await seconde.chargerObjectifs("maths")).toHaveLength(1);
+    expect(await seconde.chargerObjectifs("japonais")).toHaveLength(1);
   });
 });

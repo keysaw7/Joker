@@ -143,7 +143,7 @@ Elle doit donner une raison concrète d'apprendre cette notion, en la reliant à
 
 Génère aussi 3 à 6 cas d'usage (casDusage) : des choses concrètes et réelles que l'élève
 pourra faire en atteignant son objectif. Chaque cas d'usage doit :
-- avoir un titre court et actionnable (ex. « Faire de bonnes pâtes maison ») ;
+- avoir un titre court et actionnable (ex. « Tenir une conversation simple au konbini ») ;
 - avoir une description d'une phrase qui explique concrètement ce que cela implique ;
 - être varié (quotidien, professionnel, créatif, social…) et ancré dans la réalité ;
 - montrer comment la notion courante est une étape vers ces usages.
