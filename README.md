@@ -1,4 +1,4 @@
-# Joker — Moteur pédagogique (japonais)
+# Joker — Moteur pédagogique universel
 
 > Ce document est la **Constitution du projet**.
 > Toute décision de conception, de code ou de produit doit rester cohérente avec lui.
@@ -27,13 +27,17 @@ Ce n'est pas un LMS.
 Ce n'est pas un chatbot.
 Ce n'est pas « ChatGPT avec une belle interface ».
 
-Joker est un **moteur pédagogique** centré aujourd'hui sur l'**apprentissage du japonais** (le cœur reste extensible techniquement).
+Joker est un **moteur pédagogique universel**.
 
 Sa promesse :
 
-> Permettre à n'importe qui d'apprendre le japonais de la manière la plus efficace possible, avec un parcours adapté à son objectif.
+> Permettre à n'importe qui d'apprendre n'importe quel domaine de la manière la plus efficace possible.
 
-**Le moteur reste identique d'un objectif à l'autre. Seul le contenu pédagogique change.**
+Un domaine peut être le japonais, les mathématiques, la cuisine, la programmation, ou tout autre champ de connaissance — le moteur ne change pas, seul le contenu et le contexte changent.
+
+**Focus actuel (produit et développement)** : nous concentrons l'interface, les exemples et la qualité du parcours sur le **japonais**, pour faire fonctionner le moteur de bout en bout sur un seul domaine avant d'en ouvrir d'autres.
+
+**Le moteur reste toujours identique. Seul le contenu change.**
 
 L'intelligence du système ne réside pas dans les connaissances elles-mêmes, mais dans sa **capacité à construire le meilleur parcours d'apprentissage possible**.
 
@@ -129,7 +133,7 @@ L'expérience est organisée en **cycles**. Chaque cycle correspond à l'acquisi
 
 ### 7.1. Accueil
 
-Présentation rapide du produit. L'utilisateur démarre directement un parcours **japonais**.
+Présentation rapide du produit. Pour l'instant, l'application ne propose que le **japonais** (un seul domaine exposé), en accord avec le focus de développement actuel.
 
 ### 7.2. Objectifs
 
@@ -370,7 +374,7 @@ Termes de référence — à utiliser tels quels dans le code et les discussions
 
 | Terme | Définition |
 |---|---|
-| **Domaine** | Le champ de connaissance (produit : japonais). |
+| **Domaine** | Le champ de connaissance (maths, japonais, cuisine…). Produit actuel : japonais uniquement. |
 | **Objectif** | Le but concret de l'élève. Contexte principal de la progression. |
 | **Diagnostic** | Représentation du niveau réel de l'élève à un instant donné. |
 | **Profil d'apprenant** | État vivant de l'élève : acquis, lacunes, erreurs fréquentes, préférences. Enrichi en continu. |
