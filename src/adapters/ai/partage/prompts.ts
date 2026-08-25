@@ -294,6 +294,27 @@ Champs par type (schéma PLAT : null pour les champs inutiles) :
 - image : briefMedia, alt, legende (optionnel)`;
 }
 
+function consignesChampsExercice(format: FormatExercice): string {
+  switch (format) {
+    case "qcm":
+      return `Format imposé : qcm.
+Champs requis : consigne, question (intitulé), options (2 à 6 réponses non vides), bonneReponse (index 0-based de la bonne option).`;
+    case "trous":
+      return `Format imposé : trous.
+Champs requis : consigne, phrases[{ id, texteAvecTrous avec exactement un marqueur ___, solutions[] }].`;
+    case "appariement":
+      return `Format imposé : appariement.
+Champs requis : consigne, paires[{ id, gauche, droite }] (au moins 2). distracteurs : liste optionnelle ou null.`;
+    case "production_libre":
+      return `Format imposé : production_libre.
+Champs requis : consigne, enonce. criteres et aide : listes/texte optionnels ou null.`;
+    default: {
+      const _inexhaustif: never = format;
+      throw new Error(`Format d'exercice inconnu : ${String(_inexhaustif)}`);
+    }
+  }
+}
+
 export function promptGenererExercice(
   contexte: ContexteApprentissage,
   notion: Notion,
@@ -313,12 +334,7 @@ Niveau de guidage demandé : ${guidage}
 - modere : quelques indices
 - autonome : l'apprenant doit raisonner seul
 
-Format imposé (respecte STRICTEMENT ce format dans le champ format) : ${format}
-Champs à remplir selon le format (mets null pour tous les autres) :
-- qcm : question, options (2-6), bonneReponse (index 0-based) ; phrases/paires/enonce/criteres/aide/distracteurs = null
-- trous : phrases[{ id, texteAvecTrous avec exactement un marqueur ___, solutions[] }] ; question/options/bonneReponse/paires/enonce/… = null
-- appariement : paires[{ id, gauche, droite }], distracteurs optionnels ou null ; le reste = null
-- production_libre : enonce, criteres optionnels, aide optionnelle ; le reste = null
+${consignesChampsExercice(format)}
 
 Crée UN exercice dans ce format exact, adapté au profil et au guidage.
 Remplis cibleLacune avec null sauf remédiation.`;
@@ -384,9 +400,8 @@ ${JSON.stringify(notion, null, 2)}
 
 Lacune à combler : ${lacune}
 
-Format imposé : ${format}
+${consignesChampsExercice(format)}
 Guidage : fort (cibleLacune doit reprendre la lacune).
-Mets null pour les champs non pertinents au format (schéma plat).
 
 Génère UN exercice dans ce format exact, ciblant précisément cette lacune.`;
 }

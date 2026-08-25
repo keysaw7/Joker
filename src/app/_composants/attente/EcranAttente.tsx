@@ -12,14 +12,13 @@ interface EcranAttenteProps {
 }
 
 export function EcranAttente({ phase, variant = "plein" }: EcranAttenteProps) {
+  return <EcranAttentePourPhase key={phase} phase={phase} variant={variant} />;
+}
+
+function EcranAttentePourPhase({ phase, variant }: Required<EcranAttenteProps>) {
   const config = PHASES_ATTENTE[phase];
   const [indexEtape, setIndexEtape] = useState(0);
   const [cleFondu, setCleFondu] = useState(0);
-
-  useEffect(() => {
-    setIndexEtape(0);
-    setCleFondu((k) => k + 1);
-  }, [phase]);
 
   useEffect(() => {
     if (config.etapes.length <= 1) {
@@ -30,7 +29,7 @@ export function EcranAttente({ phase, variant = "plein" }: EcranAttenteProps) {
       setCleFondu((k) => k + 1);
     }, INTERVALLE_ETAPES_MS);
     return () => window.clearInterval(id);
-  }, [config.etapes.length, phase]);
+  }, [config.etapes.length]);
 
   const messageCourant = config.etapes[indexEtape] ?? config.etapes[0];
   const estCompact = variant === "compact";

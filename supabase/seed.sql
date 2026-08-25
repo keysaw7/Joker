@@ -1,0 +1,3 @@
+-- Données de développement local.
+-- Les utilisateurs sont créés automatiquement à la première visite
+-- (connexion anonyme, voir src/proxy.ts). Aucun compte n'est semé ici.

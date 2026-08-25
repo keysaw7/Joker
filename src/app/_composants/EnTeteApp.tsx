@@ -8,6 +8,7 @@ import { Bouton } from "./Bouton";
 
 interface EnTeteAppProps {
   email?: string | null;
+  modeLocal?: boolean;
 }
 
 function lienActif(chemin: string, actuel: string): string {
@@ -20,18 +21,23 @@ function lienActif(chemin: string, actuel: string): string {
     : "text-texte-secondaire hover:text-texte";
 }
 
-export function EnTeteApp({ email: emailInitial }: EnTeteAppProps) {
+export function EnTeteApp({
+  email: emailInitial,
+  modeLocal: modeLocalInitial,
+}: EnTeteAppProps) {
   const pathname = usePathname();
   const [email, setEmail] = useState<string | null | undefined>(emailInitial);
+  const [modeLocal, setModeLocal] = useState(modeLocalInitial ?? false);
   const [enCours, startTransition] = useTransition();
 
   useEffect(() => {
-    if (emailInitial === undefined) {
+    if (emailInitial === undefined && modeLocalInitial === undefined) {
       obtenirSessionUtilisateur().then((utilisateur) => {
         setEmail(utilisateur?.email ?? null);
+        setModeLocal(utilisateur?.modeLocal ?? false);
       });
     }
-  }, [emailInitial]);
+  }, [emailInitial, modeLocalInitial]);
 
   return (
     <header className="flex flex-col gap-4 border-b border-bordure pb-4 sm:flex-row sm:items-center sm:justify-between">
@@ -53,7 +59,9 @@ export function EnTeteApp({ email: emailInitial }: EnTeteAppProps) {
       </div>
 
       <div className="flex items-center gap-3 text-sm">
-        {email ? (
+        {modeLocal ? (
+          <span className="text-texte-secondaire">Mode local</span>
+        ) : email ? (
           <>
             <span className="text-texte-secondaire">{email}</span>
             <Bouton

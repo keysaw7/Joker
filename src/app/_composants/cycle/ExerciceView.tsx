@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type {
   Correction,
   EtatExercices,
@@ -103,7 +103,7 @@ function construireReponse(
   }
 }
 
-export function ExerciceView({
+function ExerciceViewActif({
   exercice,
   etatExercices,
   correctionPrecedente,
@@ -116,13 +116,6 @@ export function ExerciceView({
   const [remplissages, setRemplissages] = useState<Record<string, string>>({});
   const [associations, setAssociations] = useState<Record<string, string>>({});
   const [texteLibre, setTexteLibre] = useState("");
-
-  useEffect(() => {
-    setIndexChoisi(null);
-    setRemplissages({});
-    setAssociations({});
-    setTexteLibre("");
-  }, [exercice.id]);
 
   const etatSaisie = { indexChoisi, remplissages, associations, texteLibre };
   const peutValider =
@@ -227,4 +220,8 @@ export function ExerciceView({
       </Carte>
     </div>
   );
+}
+
+export function ExerciceView(props: ExerciceViewProps) {
+  return <ExerciceViewActif key={props.exercice.id} {...props} />;
 }

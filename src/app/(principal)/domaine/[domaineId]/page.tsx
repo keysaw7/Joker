@@ -29,8 +29,18 @@ export default function PageDomaine() {
   }, [domaineId]);
 
   useEffect(() => {
-    void chargerSessions();
-  }, [chargerSessions]);
+    let estActif = true;
+
+    void listerSessions(domaineId).then((liste) => {
+      if (estActif) {
+        setSessions(liste);
+      }
+    });
+
+    return () => {
+      estActif = false;
+    };
+  }, [domaineId]);
 
   if (!domaine) {
     return (

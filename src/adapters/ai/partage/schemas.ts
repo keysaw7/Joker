@@ -180,30 +180,89 @@ const schemaPaireAppariement = z.object({
   droite: z.string(),
 });
 
-/**
- * Schéma plat compatible OpenAI structured outputs
- * (pas de oneOf / discriminatedUnion — même pattern que schemaIntentionBloc).
- * Les champs non pertinents pour le format demandé doivent être null.
- */
-export const schemaExerciceSansIds = z.object({
-  format: schemaFormatExercice,
+const schemaExerciceCommun = {
   consigne: z.string(),
   guidage: schemaNiveauGuidage,
   cibleLacune: z.string().nullable(),
-  // qcm
+};
+
+/**
+ * Schéma plat compatible OpenAI structured outputs
+ * (pas de oneOf / discriminatedUnion — même pattern que schemaIntentionBloc).
+ * Préférer `schemaExercicePourFormat` à la génération : le format est connu
+ * et les champs requis sont alors imposés au modèle.
+ */
+export const schemaExerciceSansIds = z.object({
+  format: schemaFormatExercice,
+  ...schemaExerciceCommun,
   question: z.string().nullable(),
   options: z.array(z.string()).nullable(),
   bonneReponse: z.number().int().nonnegative().nullable(),
-  // trous
   phrases: z.array(schemaPhraseATrous).nullable(),
-  // appariement
   paires: z.array(schemaPaireAppariement).nullable(),
   distracteurs: z.array(z.string()).nullable(),
-  // production_libre
   enonce: z.string().nullable(),
   criteres: z.array(z.string()).nullable(),
   aide: z.string().nullable(),
 });
+
+export const schemaExerciceQcm = z.object({
+  format: z.literal("qcm"),
+  ...schemaExerciceCommun,
+  question: z.string().min(1),
+  options: z.array(z.string().min(1)).min(2).max(6),
+  bonneReponse: z.number().int().nonnegative(),
+});
+
+export const schemaExerciceTrous = z.object({
+  format: z.literal("trous"),
+  ...schemaExerciceCommun,
+  phrases: z.array(schemaPhraseATrous).min(1),
+});
+
+export const schemaExerciceAppariement = z.object({
+  format: z.literal("appariement"),
+  ...schemaExerciceCommun,
+  paires: z.array(schemaPaireAppariement).min(2),
+  distracteurs: z.array(z.string()).nullable(),
+});
+
+export const schemaExerciceProductionLibre = z.object({
+  format: z.literal("production_libre"),
+  ...schemaExerciceCommun,
+  enonce: z.string().min(1),
+  criteres: z.array(z.string()).nullable(),
+  aide: z.string().nullable(),
+});
+
+export type FormatExerciceSchema = z.infer<typeof schemaFormatExercice>;
+
+export type ExerciceStructureSelonFormat =
+  | z.infer<typeof schemaExerciceQcm>
+  | z.infer<typeof schemaExerciceTrous>
+  | z.infer<typeof schemaExerciceAppariement>
+  | z.infer<typeof schemaExerciceProductionLibre>;
+
+/** Schéma d'exercice pour un format connu — sans oneOf, champs hors format omis. */
+export function schemaExercicePourFormat(
+  format: FormatExerciceSchema,
+): z.ZodType<ExerciceStructureSelonFormat> {
+  switch (format) {
+    case "qcm":
+      return schemaExerciceQcm;
+    case "trous":
+      return schemaExerciceTrous;
+    case "appariement":
+      return schemaExerciceAppariement;
+    case "production_libre":
+      return schemaExerciceProductionLibre;
+    default: {
+      const _inexhaustif: never = format;
+      throw new Error(`Format d'exercice inconnu : ${String(_inexhaustif)}`);
+    }
+  }
+}
+
 export const schemaAnalyseReponse = z.object({
   correcte: z.boolean(),
   pourquoi: z.string(),

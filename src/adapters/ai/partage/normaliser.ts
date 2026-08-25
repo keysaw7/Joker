@@ -1,22 +1,41 @@
 import type {
   AnalyseReponse,
   Exercice,
+  FormatExercice,
   IntentionBloc,
+  NiveauGuidage,
+  PaireAppariement,
+  PhraseATrous,
   SpecGraphique,
   VarianteEncadre,
 } from "@/core/domain";
 import type { z } from "zod";
 import type {
   schemaAnalyseReponse,
-  schemaExerciceSansIds,
   schemaIntentionBloc,
   schemaSpecGraphique,
 } from "./schemas";
 
 type IntentionGeneree = z.infer<typeof schemaIntentionBloc>;
 type SpecGraphiqueGeneree = z.infer<typeof schemaSpecGraphique>;
-type ExerciceGenere = z.infer<typeof schemaExerciceSansIds>;
 type AnalyseGeneree = z.infer<typeof schemaAnalyseReponse>;
+
+/** Accepte le schéma plat ou un schéma par format (champs hors format omis). */
+type ExerciceGenere = {
+  readonly format: FormatExercice;
+  readonly consigne: string;
+  readonly guidage: NiveauGuidage;
+  readonly cibleLacune?: string | null;
+  readonly question?: string | null;
+  readonly options?: readonly string[] | null;
+  readonly bonneReponse?: number | null;
+  readonly phrases?: readonly PhraseATrous[] | null;
+  readonly paires?: readonly PaireAppariement[] | null;
+  readonly distracteurs?: readonly string[] | null;
+  readonly enonce?: string | null;
+  readonly criteres?: readonly string[] | null;
+  readonly aide?: string | null;
+};
 
 function normaliserNullable<T>(valeur: T | null | undefined): T | undefined {
   return valeur ?? undefined;
@@ -257,6 +276,10 @@ export function normaliserExercice(
           ? { aide: genere.aide.trim() }
           : {}),
       };
+    }
+    default: {
+      const _inexhaustif: never = genere.format;
+      throw new Error(`Format d'exercice inconnu : ${String(_inexhaustif)}`);
     }
   }
 }

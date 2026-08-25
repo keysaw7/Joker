@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { obtenirUtilisateurCourant } from "@/adapters/auth/utilisateurCourant";
 import { reprendreSession } from "@/app/actions";
 import { EnTeteApp } from "@/app/_composants/EnTeteApp";
 import { SidebarParcours } from "@/app/_composants/SidebarParcours";
@@ -17,6 +18,7 @@ export default async function LayoutSession({
     notFound();
   }
 
+  const utilisateur = await obtenirUtilisateurCourant();
   const contexte =
     session.etatCycle?.contexte ?? session.etatParcours?.contexte ?? null;
   const roadmap = contexte?.roadmap ?? null;
@@ -26,7 +28,10 @@ export default async function LayoutSession({
     <div className="app-shell">
       <div className="border-b border-bordure px-6 py-4">
         <div className="w-full">
-          <EnTeteApp />
+          <EnTeteApp
+            email={utilisateur?.email ?? null}
+            modeLocal={utilisateur?.modeLocal ?? false}
+          />
         </div>
       </div>
       <div className="app-shell-contenu app-shell-session">

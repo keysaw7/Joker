@@ -4,6 +4,7 @@ import type {
   Cours,
   ExempleExpert,
   Exercice,
+  FormatExercice,
   IntentionBloc,
   PlanCours,
   Problematique,
@@ -64,7 +65,7 @@ import {
   schemaCorrectionSansIds,
   schemaEvaluationDiagnostic,
   schemaExempleExpertSansNotionId,
-  schemaExerciceSansIds,
+  schemaExercicePourFormat,
   schemaMermaid,
   schemaPlanCours,
   schemaProblematiqueSansNotionId,
@@ -169,6 +170,31 @@ async function genererStructure<T>(
     );
     throw erreur;
   }
+}
+
+async function genererExerciceNormalise(
+  modele: LanguageModel,
+  format: FormatExercice,
+  prompt: string,
+  etiquette: string,
+  notionId: string,
+): Promise<Exercice> {
+  const genere = await genererStructure(
+    modele,
+    schemaExercicePourFormat(format),
+    prompt,
+    etiquette,
+  );
+  const normalise = normaliserExercice(genere, {
+    id: crypto.randomUUID(),
+    notionId,
+  });
+  if (normalise.format !== format) {
+    throw new Error(
+      `Format généré « ${normalise.format} » ≠ format demandé « ${format} »`,
+    );
+  }
+  return normalise;
 }
 
 function journaliserRejetIntentionExempleExpert(intention: IntentionBloc): void {
@@ -449,22 +475,13 @@ export function creerCapacitesIA(modele: LanguageModel): {
 
   const generateurExercices: GenerateurExercices = {
     async genererExercice(contexte, notion, guidage, format): Promise<Exercice> {
-      const genere = await genererStructure(
+      const normalise = await genererExerciceNormalise(
         modele,
-        schemaExerciceSansIds,
+        format,
         promptGenererExercice(contexte, notion, guidage, format),
         "exercice",
+        notion.id,
       );
-      const normalise = normaliserExercice(genere, {
-        id: crypto.randomUUID(),
-        notionId: notion.id,
-      });
-      // Force le guidage demandé et le format cible si le modèle dérive.
-      if (normalise.format !== format) {
-        throw new Error(
-          `Format généré « ${normalise.format} » ≠ format demandé « ${format} »`,
-        );
-      }
       return { ...normalise, guidage };
     },
   };
@@ -512,21 +529,13 @@ export function creerCapacitesIA(modele: LanguageModel): {
 
   const remediation: Remediation = {
     async genererExerciceCible(contexte, notion, lacune, format): Promise<Exercice> {
-      const genere = await genererStructure(
+      const normalise = await genererExerciceNormalise(
         modele,
-        schemaExerciceSansIds,
+        format,
         promptRemediation(contexte, notion, lacune, format),
         "remediation",
+        notion.id,
       );
-      const normalise = normaliserExercice(genere, {
-        id: crypto.randomUUID(),
-        notionId: notion.id,
-      });
-      if (normalise.format !== format) {
-        throw new Error(
-          `Format remédiation « ${normalise.format} » ≠ format demandé « ${format} »`,
-        );
-      }
       return {
         ...normalise,
         guidage: "fort",

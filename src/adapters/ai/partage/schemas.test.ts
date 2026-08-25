@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { normaliserAnalyse, normaliserIntention } from "./normaliser";
+import { normaliserAnalyse, normaliserExercice, normaliserIntention } from "./normaliser";
 import {
   schemaAnalyseReponse,
   schemaExempleExpertSansNotionId,
+  schemaExercicePourFormat,
   schemaPlanCours,
   schemaProfilSansIds,
   schemaQuestionsDiagnostic,
@@ -403,5 +404,70 @@ describe("schemas IA", () => {
         ],
       }).success,
     ).toBe(false);
+  });
+
+  it("rejette un QCM incomplet au schéma du format", () => {
+    const schema = schemaExercicePourFormat("qcm");
+    expect(
+      schema.safeParse({
+        format: "qcm",
+        consigne: "Choisis la bonne réponse",
+        guidage: "fort",
+        cibleLacune: "particules",
+        question: null,
+        options: null,
+        bonneReponse: null,
+      }).success,
+    ).toBe(false);
+    expect(
+      schema.safeParse({
+        format: "qcm",
+        consigne: "Choisis la bonne réponse",
+        guidage: "fort",
+        cibleLacune: "particules",
+        question: "Quelle particule ?",
+        options: ["は"],
+        bonneReponse: 0,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepte un QCM complet et le normalise", () => {
+    const genere = schemaExercicePourFormat("qcm").parse({
+      format: "qcm",
+      consigne: "Choisis la bonne réponse",
+      guidage: "fort",
+      cibleLacune: "particules",
+      question: "Quelle particule marque le thème ?",
+      options: ["は", "が", "を"],
+      bonneReponse: 0,
+    });
+    const exercice = normaliserExercice(genere, {
+      id: "ex-1",
+      notionId: "n-1",
+    });
+    expect(exercice).toMatchObject({
+      format: "qcm",
+      question: "Quelle particule marque le thème ?",
+      options: ["は", "が", "を"],
+      bonneReponse: 0,
+      cibleLacune: "particules",
+    });
+  });
+
+  it("lève si un QCM normalisé n'a plus assez d'options après nettoyage", () => {
+    expect(() =>
+      normaliserExercice(
+        {
+          format: "qcm",
+          consigne: "Choisis",
+          guidage: "fort",
+          question: "Question ?",
+          options: ["A", "  "],
+          bonneReponse: 0,
+        },
+        { id: "ex-1", notionId: "n-1" },
+      ),
+    ).toThrow(/QCM incomplet/);
   });
 });

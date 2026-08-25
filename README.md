@@ -488,4 +488,17 @@ Pour utiliser un fournisseur réel :
 
 Si une clé est manquante, l'application affiche une erreur explicite au premier appel IA.
 
+### Stack locale (Supabase + Docker)
+
+Joker tourne entièrement en local. Docker doit être démarré, puis :
+
+```bash
+npm run db:start    # API http://127.0.0.1:54321 — Studio http://127.0.0.1:54323
+npm run db:status   # URL, clés et état des services
+npm run db:reset    # recrée la base locale (migrations + seed)
+npm run db:stop     # arrête la stack (les données persistent)
+```
+
+Copier dans `.env.local` l'URL `API` et la clé publique (`anon` / publishable) affichées par `db:start`. Au premier chargement, un utilisateur anonyme local est créé automatiquement : pas d'écran de connexion. Effacer les cookies du navigateur crée un nouvel utilisateur local.
+
 Le code sera construit **progressivement**, module par module, en cohérence stricte avec ce document. Chaque module n'est créé que lorsque le besoin réel le justifie.

@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { creerClientSupabaseServeur } from "@/adapters/auth/supabase/serveur";
+import {
+  construireUtilisateurCourant,
+  type UtilisateurCourant,
+} from "@/adapters/auth/utilisateur";
 
-export interface UtilisateurCourant {
-  readonly id: string;
-  readonly email: string | null;
-}
+export type { UtilisateurCourant };
 
 export async function obtenirUtilisateurCourant(): Promise<UtilisateurCourant | null> {
   const client = await creerClientSupabaseServeur();
@@ -15,10 +16,7 @@ export async function obtenirUtilisateurCourant(): Promise<UtilisateurCourant | 
     return null;
   }
 
-  return {
-    id: utilisateur.id,
-    email: utilisateur.email ?? null,
-  };
+  return construireUtilisateurCourant(utilisateur);
 }
 
 export async function exigerUtilisateurCourant(): Promise<UtilisateurCourant> {
